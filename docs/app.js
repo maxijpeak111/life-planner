@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.9';
+const VERSION = '2.0';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -258,6 +258,7 @@ function applyTheme() {
   if (!st) { st = document.createElement('style'); st.id = 'tagcss'; document.head.appendChild(st); }
   st.textContent = TAGS.map(k => { const c = S.tagColors[k];
     return `.tag-${k}{background:color-mix(in srgb,${c} 24%,transparent);color:color-mix(in srgb,${c} 62%,${dark ? 'white' : 'black'})}.dot-${k}{background:${c}}`; }).join('');
+  st.textContent += ':root{' + TAGS.map(k => `--tag${k}:${S.tagColors[k]}`).join(';') + '}';
   const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = dark ? '#141B2B' : '#FBF8F3';
 }
 
@@ -372,11 +373,8 @@ ${S.vision.banner ? `<p class="banner">${esc(S.vision.banner)}</p>` : ''}
 ${yChange ? `<p class="line-sub">Yesterday you said: <i>${esc(yChange)}</i></p>` : ''}
 ${nudges()}
 ${coachToday(t)}
-${plansBlock(t, 'Plans today')}
-<div class="sect"><span class="grow">Priorities</span><button data-act="fromGoals" data-v="${t}">＋ From goals</button></div>
-${pri.length ? `<div class="list">${pri.map(x => taskRow(x)).join('')}</div>` : `<div class="list"><div class="empty">Star ★ a task to pin it here.</div></div>`}
-<div class="sect"><span class="grow">Rest of today</span><button data-act="applyTemplate" data-v="${t}">Use template</button></div>
-${slotList(rest, 'Nothing else planned. Tap + to add, or use a template.')}
+<div class="sect"><span class="grow">Today</span><button data-act="fromGoals" data-v="${t}">＋ Goal step</button><button data-act="applyTemplate" data-v="${t}">Template</button></div>
+${dayBlocks(t)}
 ${bodyRows(t)}
 <div class="tiles">
 <button class="tile" data-act="habitSheet" data-v="${t}"><div class="k">Habits · tap to tick</div><div class="v">${hdone}/${hs.length}</div>${best ? `<div class="streak">🔥 ${best} day streak</div>` : ''}</button>
@@ -399,10 +397,8 @@ function dnav(label, step) { return `<div class="datenav"><button class="navb" d
 function calDay() {
   const d = V.cal.date, ts = dayTasks(d), st = statsRange(d, d);
   return dnav(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (d === today() ? ' · Today' : ''), 1) +
-    `<div class="card" style="display:flex;align-items:center;gap:10px"><span style="flex:1">${shiftText(d) || '<span class="muted">No shift entered</span>'}</span><button class="btn sm" data-act="editShift" data-v="${d}">Shift</button><button class="btn sm" data-act="applyTemplate" data-v="${d}">Template</button><button class="btn sm" data-act="fromGoals" data-v="${d}">Goals</button></div>
-${plansBlock(d)}
-${ts.filter(t => t.priority).length ? `<div class="sect">Priorities</div><div class="list">${ts.filter(t => t.priority).map(x => taskRow(x)).join('')}</div>` : ''}
-<div class="sect">Plan</div>${slotList(ts.filter(t => !t.priority), 'Nothing planned. Tap + to add.')}
+    `<div class="card" style="display:flex;align-items:center;gap:10px"><span style="flex:1">${shiftText(d) || '<span class="muted">No shift entered</span>'}</span><button class="btn sm" data-act="editShift" data-v="${d}">Shift</button><button class="btn sm" data-act="applyTemplate" data-v="${d}">Template</button><button class="btn sm" data-act="fromGoals" data-v="${d}">＋ Goal step</button></div>
+<div class="sect">Plan</div>${dayBlocks(d, 'Nothing planned. Tap ＋, add a goal step or use a template.')}
 <div class="sect">How this day went</div>${statsHtml(st)}`;
 }
 function calWeek() {
@@ -412,7 +408,7 @@ function calWeek() {
   for (let i = 0; i < 7; i++) {
     const d = addDays(ws, i), ts = dayTasks(d), st = statsRange(d, d);
     h += `<button class="wday ${d === t ? 'today' : ''}" data-act="calDay" data-v="${d}"><div class="wh"><b>${fmt(d, { weekday: 'short', day: 'numeric' })}</b><span>${shiftText(d) ? `<span class="shiftpill">${esc(shiftText(d))}</span>` : ''} ${ts.length ? st.pct + '%' : ''}</span></div>
-${dayPlans(d).map(x => `<div class="wline"><i class="dot" style="background:${KIND[x.cat || 'social'].color}"></i><span><b>◆ ${x.allDay ? 'All day' : esc(x.time || '')}</b> ${esc(x.title)}</span></div>`).join('')}${ts.slice(0, 8).map(x => `<div class="wline ${x.status === 'done' ? 'done' : ''}"><i class="dot dot-${x.tag}"></i><span>${x.priority ? '★ ' : ''}${esc(x.title)}</span></div>`).join('')}${ts.length > 8 ? `<div class="small muted" style="margin-top:4px">+${ts.length - 8} more</div>` : ''}${!ts.length && !dayPlans(d).length ? '<div class="small muted" style="margin-top:4px">Nothing planned</div>' : ''}</button>`;
+${dayPlans(d).map(x => `<div class="wline"><i class="dot" style="background:${KIND[x.cat || 'social'].color}"></i><span><b>◆ ${x.allDay ? 'All day' : esc(x.time || '')}</b> ${esc(x.title)}</span></div>`).join('')}${ts.slice(0, 8).map(x => `<div class="wline ${x.status === 'done' ? 'done' : ''}"><i class="dot dot-${x.tag}"></i><span>${x.priority ? '★ ' : ''}${esc(x.title)}${x.goalId && goalById(x.goalId) ? ` <span class="gbadge">⛰ ${esc(goalById(x.goalId).title.split(/ — | - /)[0])}</span>` : ''}</span></div>`).join('')}${ts.length > 8 ? `<div class="small muted" style="margin-top:4px">+${ts.length - 8} more</div>` : ''}${!ts.length && !dayPlans(d).length ? '<div class="small muted" style="margin-top:4px">Nothing planned</div>' : ''}</button>`;
   }
   h += `<div class="sect">This week</div>` + statsHtml(statsRange(ws, we));
   return h;
@@ -481,6 +477,7 @@ function goalDetail(g) {
 <div class="meta" style="margin-top:4px">${hz}${g.deadline ? ' · by ' + fmt(g.deadline, { day: 'numeric', month: 'long', year: 'numeric' }) : ''}${g.achieved ? ' · 🏆 Achieved ' + fmt(g.achieved) : ''}</div>
 ${allSteps(g).length ? `<div class="bar" style="margin-top:10px"><i style="width:${goalPct(g)}%"></i></div><div class="small muted" style="margin-top:4px">${goalPct(g)}% of steps done</div>` : ''}
 ${feeds.length ? `<div class="feeds">Feeds into: ${feeds.map(f => esc(f.title)).join(', ')}</div> ` : ''}${fedBy.length ? `<div class="feeds">Fed by: ${fedBy.map(f => esc(f.title)).join(', ')}</div>` : ''}
+${storyHtml(g)}
 ${g.why ? `<div class="sect">Why</div><div class="card para">${esc(g.why)}</div>` : ''}
 ${g.research ? `<div class="sect">Research summary</div><div class="card para">${esc(g.research)}</div>` : ''}
 ${g.sources ? `<div class="sect">Sources</div><div class="card para small">${linkify(g.sources)}</div>` : ''}
@@ -796,18 +793,101 @@ function goalPicker(d, gid) {
   }
   const g = goalById(gid); if (!g) return;
   const cp = curPhase(g);
-  openSheet(`<button class="back" data-act="fromGoals" data-v="${d}">‹ All goals</button><h3 style="margin-top:8px">${esc(g.title)}</h3><p class="small muted">Tap a step to add it to ${dl}.</p>${g.phases.map(p => { const open = p.steps.filter(s => s.status !== 'done'); if (!open.length) return ''; return `<details class="grp" ${p === cp ? 'open' : ''}><summary>${esc(p.name)}${p === cp ? ' <span class="muted">· now</span>' : ''} <span class="muted">(${open.length})</span></summary><div class="list">${open.map(s => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${d}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${STN[s.status]}${S.tasks.some(t => t.stepId === s.id && t.status === 'open') ? ' · already on a day' : ''}</div></div><span class="chev">＋</span></button>`).join('')}</div></details>`; }).join('')}`);
+  openSheet(`<button class="back" data-act="fromGoals" data-v="${d}">‹ All goals</button><h3 style="margin-top:8px">${esc(g.title)}</h3><p class="small muted">Tap a step to add it to ${dl}.</p>${g.phases.map(p => { const open = p.steps.filter(s => s.status !== 'done'); if (!open.length) return ''; return `<details class="grp" ${p === cp ? 'open' : ''}><summary>${esc(p.name)}${p === cp ? ' <span class="muted">· now</span>' : ''} <span class="muted">(${open.length})</span></summary><div class="list">${open.map(s => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${d}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${(() => { const pt = S.tasks.find(t => t.stepId === s.id && t.status === 'open'); return pt ? '📅 Planned ' + fmt(pt.date) : s === nextUnplaced(g) ? '<b style="color:var(--accent-ink)">Next to place</b>' : STN[s.status]; })()}</div></div><span class="chev">＋</span></button>`).join('')}</div></details>`; }).join('')}`);
 }
 function stepConfirm(g, s, d) {
   const rel = relatedSteps(g, s);
-  if (!rel.length) { addTaskFromStep(g, s, d); closeSheet(); render(); toast('Added to ' + (d === today() ? 'today' : fmt(d))); return; }
+  if (!rel.length) { addTaskFromStep(g, s, d); chainOffer(g, s, d); return; }
   openSheet(`<button class="back" data-act="gpGoal" data-g="${g.id}" data-v="${d}">‹ ${esc(g.title)}</button><h3 style="margin-top:8px">${esc(s.title)}</h3><div class="lbl">Also counts toward (optional)</div><p class="small muted">Tick any step this also moves forward — finishing the task ticks them all.</p>${rel.map(([o, x]) => `<label class="check"><input type="checkbox" data-also="${o.id}|${x.id}"> <span>${esc(x.title)}<br><span class="small muted">${esc(o.title)}</span></span></label>`).join('')}<div class="row-btns"><button class="btn primary" data-act="stepAdd" data-g="${g.id}" data-s="${s.id}" data-v="${d}">Add to ${d === today() ? 'today' : fmt(d)}</button></div>`);
 }
 const PICK_ACTS = {
   gpGoal: el => goalPicker(el.dataset.v || today(), el.dataset.g),
-  stepAdd: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s); if (!s) return; const extra = [...document.querySelectorAll('[data-also]')].filter(c => c.checked).map(c => c.dataset.also.split('|')); addTaskFromStep(g, s, el.dataset.v, extra); closeSheet(); render(); toast(extra.length ? `Added — counts for ${extra.length + 1} goals` : 'Added'); },
+  stepAdd: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s); if (!s) return; const extra = [...document.querySelectorAll('[data-also]')].filter(c => c.checked).map(c => c.dataset.also.split('|')); addTaskFromStep(g, s, el.dataset.v, extra); if (extra.length) toast(`Counts for ${extra.length + 1} goals`); chainOffer(g, s, el.dataset.v); },
   habitSheet: el => { const d = (el && el.dataset && el.dataset.v) || today(), hs = activeHabits();
     openSheet(`<h3 id="hb_sheet">Habits · ${d === today() ? 'today' : fmt(d)}</h3>${hs.length ? `<div class="list">${hs.map(h => { const on = habitDone(h.id, d), n = streak(h.id); return `<button class="mrow hrow ${on ? 'on' : ''}" data-act="toggleHabit" data-id="${h.id}" data-v="${d}"><span class="hk">${on ? '✓' : ''}</span><div class="tt"><div class="title">${esc(h.name)}</div>${n ? `<div class="meta">🔥 ${n} day streak</div>` : ''}</div></button>`; }).join('')}</div>` : '<div class="card empty">No habits yet.</div>'}<div class="row-btns"><button class="btn" data-act="moreGo" data-v="habits">Manage habits</button><button class="btn primary" data-act="closeSheet">Done</button></div>`); }
+};
+
+/* ---------- the day in blocks (Today + Calendar day) ---------- */
+function ctCard(t) {
+  const g = t.goalId && goalById(t.goalId), url = t.app && appUrl(t.app), ds = detailSummary(t);
+  const meta = [ds, t.time, fmtLen(t.length)].filter(Boolean).join(' · ');
+  const also = (t.extraSteps || []).length;
+  return `<div class="ct ct-${t.tag} ${t.status === 'done' ? 'done' : ''} ${t.priority ? 'pri' : ''}" data-act="editTask" data-id="${t.id}">
+<button class="bx" data-act="toggleTask" data-id="${t.id}" aria-label="Mark done"></button>
+<div class="tt"><div class="title">${esc(t.title)}</div>${meta ? `<div class="meta">${esc(meta)}</div>` : ''}${g ? `<div class="goalchip">⛰ ${esc(g.title)}${also ? ` +${also}` : ''}</div>` : ''}${t.note ? `<div class="meta">✎ ${esc(t.note.length > 70 ? t.note.slice(0, 70) + '…' : t.note)}</div>` : ''}</div>
+${url ? `<a class="open" data-act="link" href="${esc(url)}" target="_blank" rel="noopener">${esc(t.app)} ↗</a>` : ''}
+<button class="star ${t.priority ? 'on' : ''}" data-act="togglePri" data-id="${t.id}" aria-label="Priority">★</button></div>`;
+}
+function blockHtml(title, tasks) {
+  if (!tasks.length) return '';
+  const mins = tasks.reduce((a, t) => a + (Number(t.length) || 0), 0);
+  const sorted = tasks.slice().sort((a, b) => (b.priority ? 1 : 0) - (a.priority ? 1 : 0) || sortTasks(a, b));
+  return `<div class="blk"><div class="h"><span>${title}</span><span>${mins ? fmtLen(mins) : ''}</span></div>${sorted.map(ctCard).join('')}</div>`;
+}
+function bandHtml(b) {
+  if (b.shift) return `<div class="band band-shift" data-act="editShift" data-v="${b.d}"><div><div class="bk">Shift</div><b>💼 Work</b></div><div class="bt">${esc((b.shift.start || '?') + '–' + (b.shift.end || '?'))}</div></div>`;
+  const p = b.plan, k = KIND[p.cat || 'social'], pr = p.prep || [];
+  return `<div class="band" style="--bc:${k.color}" data-act="editTask" data-id="${p.id}"><div><div class="bk">◆ ${esc(k.name)}${pr.length ? ` · prep ${pr.filter(x => x.done).length}/${pr.length}` : ''}</div><b>${esc(p.title)}</b></div><div class="bt">${p.allDay ? 'All day' : esc((p.time || '') + (p.end ? '–' + p.end : ''))}</div></div>`;
+}
+function dayBlocks(d, emptyMsg = 'Nothing planned yet. Tap ＋, add a goal step or use a template.') {
+  const tasks = dayTasks(d), plans = dayPlans(d), sh = S.shifts[d], out = [];
+  const hourOf = p => p.allDay ? -1 : p.time ? Number(p.time.slice(0, 2)) : 12;
+  if (!tasks.length && !plans.length && !(sh && sh.start)) return `<div class="blk"><div class="empty">${emptyMsg}</div></div>`;
+  plans.filter(p => p.allDay).forEach(p => out.push(bandHtml({ plan: p })));
+  if (sh && sh.start) {
+    const st = sh.start, after = t => t.slot === 'eve' || (t.time && t.time >= st);
+    const before = tasks.filter(t => !after(t)), aft = tasks.filter(after);
+    plans.filter(p => !p.allDay && (p.time || '00:00') < st).forEach(p => out.push(bandHtml({ plan: p })));
+    out.push(blockHtml('☀️ Before your shift', before));
+    out.push(bandHtml({ shift: sh, d }));
+    plans.filter(p => !p.allDay && (p.time || '00:00') >= st).forEach(p => out.push(bandHtml({ plan: p })));
+    out.push(blockHtml('🌙 After the shift', aft));
+  } else {
+    const lim = { am: 12, pm: 17, eve: 24 };
+    [['am', '☀️ Morning'], ['pm', '🌤 Afternoon'], ['eve', '🌙 Evening'], ['any', '🕊 Anytime']].forEach(([k, l]) => {
+      out.push(blockHtml(l, tasks.filter(t => (t.slot || 'any') === k)));
+      if (k !== 'any') plans.filter(p => !p.allDay && hourOf(p) < lim[k] && hourOf(p) >= ({ am: 0, pm: 12, eve: 17 })[k]).forEach(p => out.push(bandHtml({ plan: p })));
+    });
+  }
+  return out.join('');
+}
+/* ---------- goal steps across days: placed dates, chaining, slips ---------- */
+function stepTask(sid) { return S.tasks.filter(t => (t.stepId === sid || (t.extraSteps || []).some(x => x[1] === sid)) && t.status !== 'dropped').sort((a, b) => (a.status === 'open' ? 0 : 1) - (b.status === 'open' ? 0 : 1) || a.date.localeCompare(b.date))[0] || null; }
+function nextUnplaced(g, afterSid) {
+  const st = allSteps(g); let i = afterSid ? st.findIndex(s => s.id === afterSid) + 1 : 0;
+  for (; i < st.length; i++) { const s = st[i]; if (s.status !== 'done' && !S.tasks.some(t => t.stepId === s.id && t.status === 'open')) return s; }
+  return null;
+}
+function nextDayOff(from, limit = 28) { for (let i = 1; i <= limit; i++) { const d = addDays(from, i); if (dayType(d) === 'off') return d; } return null; }
+function chainOffer(g, s, d) {
+  const nx = nextUnplaced(g, s.id);
+  if (!nx) { closeSheet(); render(); toast('Added to ' + (d === today() ? 'today' : fmt(d))); return; }
+  const off = nextDayOff(d), mon = addDays(weekStart(d), 7);
+  const opts = [off ? ['Next day off', off] : null, ['+2 days', addDays(d, 2)], ['Next Monday', mon]].filter(Boolean);
+  openSheet(`<h3>✓ ${esc(s.title)}</h3><p class="small muted">On ${fmt(d)}. Place the next step too?</p><div class="card"><div class="small muted">Next step · ${esc(g.title)}</div><div style="font-size:17px;font-weight:600;margin-top:4px">${esc(nx.title)}</div></div><div class="chips" style="margin-top:12px">${opts.map(([l, dd]) => `<button class="chip" data-act="chainPlace" data-g="${g.id}" data-s="${nx.id}" data-v="${dd}">${l} · ${fmt(dd, { weekday: 'short', day: 'numeric' })}</button>`).join('')}<button class="chip" data-act="chainPick" data-g="${g.id}" data-s="${nx.id}" data-v="${d}">Pick date…</button></div><div class="row-btns"><button class="btn" data-act="closeSheetRender">Not now</button></div>`);
+}
+/* move a planned goal-step task; later planned steps of the same goal that now clash get pushed back by the same gap */
+function moveStepTask(t, nd) {
+  const od = t.date, delta = Math.round((pd(nd) - pd(od)) / 864e5); t.date = nd;
+  const g = t.goalId && goalById(t.goalId); if (!g || delta <= 0) return 0;
+  const st = allSteps(g), idx = st.findIndex(s => s.id === t.stepId); let prev = nd, n = 0;
+  st.slice(idx + 1).forEach(s => { const lt = S.tasks.find(x => x.stepId === s.id && x.status === 'open' && x.goalId === g.id); if (!lt) return; if (lt.date <= prev) { let nd2 = addDays(lt.date, delta); if (nd2 <= prev) nd2 = addDays(prev, 1); lt.date = nd2; n++; } prev = lt.date; });
+  return n;
+}
+function storyHtml(g) {
+  const st = allSteps(g); if (!st.length) return '';
+  const row = s => { const t = stepTask(s.id); const when = s.status === 'done' ? (s.doneOn ? fmt(s.doneOn) : 'Done') : t && t.status === 'open' ? fmt(t.date) : ''; const cls = s.status === 'done' ? 'done' : t && t.status === 'open' ? (t.date < today() ? 'late' : 'plan') : 'todo';
+    return [cls, `<div class="sty sty-${cls}"><span class="sd"></span><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${cls === 'done' ? '✓ ' + when : cls === 'plan' ? '📅 ' + when : cls === 'late' ? '⚠ was ' + when : 'Not placed yet'}</div></div>${cls === 'todo' ? `<button class="btn sm" data-act="stepToDay" data-g="${g.id}" data-s="${s.id}">Place</button>` : ''}</div>`]; };
+  const rows = st.map(row); let shown = '', hidden = '', todo = 0;
+  rows.forEach(([c, h]) => { if (c === 'todo') { todo++; if (todo > 3) { hidden += h; return; } } shown += h; });
+  return `<div class="sect">The story</div><div class="story">${shown}${hidden ? `<details class="stymore"><summary>＋ ${todo - 3} more not placed yet</summary>${hidden}</details>` : ''}</div>`;
+}
+const DAYS_ACTS = {
+  chainPlace: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s), d = el.dataset.v; if (!s) return; addTaskFromStep(g, s, d); chainOffer(g, s, d); },
+  chainPick: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s); if (!s) return; pickDateSheet('Place “' + s.title + '” on…', d => { addTaskFromStep(g, s, d); chainOffer(g, s, d); }, addDays(el.dataset.v, 1)); },
+  closeSheetRender: () => { closeSheet(); render(); },
+  slipOff: el => { const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return; const d = nextDayOff(today() < t.date ? t.date : addDays(today(), -1)) || addDays(today(), 1); const n = moveStepTask(t, d); save(); toast(`Moved to ${fmt(d)}${n ? ` · ${n} later step${n > 1 ? 's' : ''} pushed back` : ''}`); slippedSheet(); },
+  slipAllOff: () => { slipped().filter(t => t.goalId).sort((a, b) => a.date.localeCompare(b.date)).forEach(t => { const d = nextDayOff(addDays(today(), -1)) || addDays(today(), 1); moveStepTask(t, d); }); save(); slippedSheet(); }
 };
 
 /* ---------- sheets & forms ---------- */
@@ -1217,7 +1297,7 @@ const ACT = {
   sortSlipped: () => slippedSheet(),
   slipKeep: el => { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) { t.date = today(); save(); slippedSheet(); } },
   slipDrop: el => { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) { t.status = 'dropped'; t.droppedOn = today(); save(); slippedSheet(); } },
-  slipMove: el => { const id = el.dataset.id; pickDateSheet('Move to which day?', d => { const t = S.tasks.find(x => x.id === id); if (t) { t.date = d; save(); } slippedSheet(); }, addDays(today(), 1)); },
+  slipMove: el => { const id = el.dataset.id; pickDateSheet('Move to which day?', d => { const t = S.tasks.find(x => x.id === id); if (t) { const n = t.goalId ? moveStepTask(t, d) : (t.date = d, 0); save(); if (n) toast(n + ' later step' + (n > 1 ? 's' : '') + ' pushed back'); } slippedSheet(); }, addDays(today(), 1)); },
   slipAllToday: () => { slipped().forEach(t => t.date = today()); save(); closeSheet(); render(); toast('Moved to today'); },
   slipAllDrop: () => { if (!confirm('Drop all slipped tasks?')) return; slipped().forEach(t => { t.status = 'dropped'; t.droppedOn = today(); }); save(); closeSheet(); render(); },
   pdQuick: el => { const f = PD; PD = null; closeSheet(); f && f(el.dataset.v); render(); },
@@ -1262,7 +1342,7 @@ const ACT = {
   editStep: el => { const g = goalById(el.dataset.g); const p = g.phases.find(x => x.steps.some(s => s.id === el.dataset.s)); stepForm(g, p, findStep(g, el.dataset.s)); },
   cycleStep: el => { const g = goalById(el.dataset.g), s = findStep(g, el.dataset.s); setStepStatus(g, s, { todo: 'doing', doing: 'done', done: 'todo' }[s.status]); save(); render();
     if (s.status === 'done' && allSteps(g).every(x => x.status === 'done') && !g.achieved) toast('Every step is done', 'Mark goal achieved', () => achieve(g)); },
-  stepToDay: el => { const g = goalById(el.dataset.g), s = findStep(g, el.dataset.s); pickDateSheet('Add “' + s.title + '” to…', d => { addTaskFromStep(g, s, d); toast('Added to ' + (d === today() ? 'today' : fmt(d))); }); },
+  stepToDay: el => { const g = goalById(el.dataset.g), s = findStep(g, el.dataset.s); pickDateSheet('Add “' + s.title + '” to…', d => { addTaskFromStep(g, s, d); chainOffer(g, s, d); }); },
   achieveGoal: el => { const g = goalById(el.dataset.id); if (confirm('Mark “' + g.title + '” as achieved?')) achieve(g); },
   archiveGoal: el => { const g = goalById(el.dataset.id); formSheet({ title: 'Archive goal', values: {}, fields: [{ k: 'note', label: 'Why are you changing direction? (kept as a record)', type: 'textarea', rows: 4 }], onSave: v => { g.archived = true; g.archivedOn = today(); g.archiveNote = v.note; V.goals.id = null; } }); },
   restoreGoal: el => { const g = goalById(el.dataset.id); g.archived = false; g.achieved = ''; save(); render(); },
@@ -1316,15 +1396,15 @@ const ACT = {
   skipUpdate: el => { S.appliedUpdates.push(el.dataset.id); PENDING = PENDING.filter(p => p.id !== el.dataset.id); save(); PENDING.length ? ACT.reviewUpdates() : closeSheet(); render(); }
 };
 let CAP = 'idea';
-Object.assign(ACT, IT_ACTS, COACH_ACTS, PICK_ACTS);
+Object.assign(ACT, IT_ACTS, COACH_ACTS, PICK_ACTS, DAYS_ACTS);
 
 function achieve(g) { g.achieved = today(); save(); render(); toast('🏆 Goal achieved — added to Wins'); }
 function slippedSheet() {
   const sl = slipped().sort((a, b) => a.date.localeCompare(b.date));
   if (!sl.length) { closeSheet(); render(); toast('All sorted'); return; }
   openSheet(`<h3>What slipped</h3><p class="small muted">Keep it (move to today), move it to another day, or drop it. No guilt — just sort.</p>
-<div class="list">${sl.map(t => `<div class="task"><span class="tag tag-${t.tag}">${t.tag}</span><div class="tt"><div class="title">${esc(t.title)}</div><div class="meta">${fmt(t.date)}</div></div><button class="btn sm" data-act="slipKeep" data-id="${t.id}">Today</button><button class="btn sm" data-act="slipMove" data-id="${t.id}">Move</button><button class="btn sm danger" data-act="slipDrop" data-id="${t.id}">Drop</button></div>`).join('')}</div>
-<div class="row-btns"><button class="btn" data-act="slipAllDrop">Drop all</button><button class="btn primary" data-act="slipAllToday">All to today</button></div>`);
+<div class="list">${sl.map(t => `<div class="task"><span class="tag tag-${t.tag}">${t.tag}</span><div class="tt"><div class="title">${esc(t.title)}</div><div class="meta">${fmt(t.date)}</div></div>${t.goalId ? `<button class="btn sm" data-act="slipOff" data-id="${t.id}">Day off</button>` : `<button class="btn sm" data-act="slipKeep" data-id="${t.id}">Today</button>`}<button class="btn sm" data-act="slipMove" data-id="${t.id}">Move</button><button class="btn sm danger" data-act="slipDrop" data-id="${t.id}">Drop</button></div>`).join('')}</div>
+${sl.some(t => t.goalId) ? `<p class="small muted">Goal steps go to your next day off; later steps of that goal get pushed back if they'd clash.</p><button class="btn full" data-act="slipAllOff">All goal steps → next day off</button>` : ''}<div class="row-btns"><button class="btn" data-act="slipAllDrop">Drop all</button><button class="btn primary" data-act="slipAllToday">All to today</button></div>`);
 }
 function goalForm(g) {
   const others = S.goals.filter(x => !g || x.id !== g.id).filter(x => !x.archived);
