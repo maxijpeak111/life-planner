@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.0';
+const VERSION = '1.1';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -608,6 +608,7 @@ function settingsPage() {
 <div class="small muted" style="margin-top:6px">Last backup: ${S.lastBackup ? fmt(S.lastBackup, { day: 'numeric', month: 'short', year: 'numeric' }) : 'never'}</div>
 <div class="row-btns"><button class="btn primary" data-act="exportBackup">Export backup</button><button class="btn" data-act="importBackup">Restore from file</button></div>
 ${snap ? `<button class="btn sm" style="margin-top:10px" data-act="restoreSnap">Undo today: go back to the start-of-day copy (${fmt(snap.date)})</button>` : ''}</div>`;
+  h += `<div class="sect">Bring data across</div><div class="card"><div class="small">Copy goal areas, shifts, events, quotes, principles and journal entries from your PT app, so you don't have to type them again.</div><div class="row-btns"><button class="btn primary" data-act="ptImport">Import from PT app</button></div>${S.lastPtImport ? `<div class="small muted" style="margin-top:6px">Last import ${fmt(S.lastPtImport)}</div>` : ''}</div>`;
   h += `<div class="sect">Add things from Claude</div><div class="card"><div class="small">Claude can send goals, steps and plans. They show up on Today as "updates from Claude". You can also paste them here.</div><div class="row-btns"><button class="btn" data-act="pasteImport">Paste from Claude</button><button class="btn" data-act="checkUpdatesNow">Check for updates</button></div></div>`;
   h += `<div class="sect">Pillars</div><button class="btn full" data-act="managePillars">Manage pillars</button>`;
   return h + '</div>';
@@ -946,6 +947,105 @@ async function checkUpdates() {
     if (V.tab === 'today' && !$('#sheet-root').classList.contains('open')) render();
   } catch (e) { }
 }
+
+/* ---------- import from the PT app (read-only: never changes the PT app) ----------
+   Reads a PT app backup (More → Settings & backup → Copy backup). Stable ids ("pt-…") mean importing
+   again later never duplicates anything. */
+let PTI = null;
+function guessPillar(t) {
+  t = (t || '').toLowerCase();
+  if (/spanish|espa|hugo/.test(t)) return 'spanish';
+  if (/money|sav|financ|income|£|debt|budget/.test(t)) return 'money';
+  if (/travel|trip|europe|canada|banff|norway/.test(t)) return 'travel';
+  if (/client|business|brand|content|coach|qualif|study|level|pt |course|website/.test(t)) return 'ptbiz';
+  if (/mind|habit|confiden|smok|read|life|sleep/.test(t)) return 'life';
+  return 'physical';
+}
+function ptAnalyse(o) {
+  const t = today(), from = addDays(t, -14), plan = o.plan || {};
+  const areas = (o.goalAreas || []).filter(a => a && (a.title || (a.items || []).length));
+  const shifts = [], events = [];
+  Object.keys(plan).sort().forEach(d => { const day = plan[d] || {};
+    if (d >= from && day.shift && day.shift.start) shifts.push([d, day.shift]);
+    if (d >= t) (day.events || []).forEach(ev => { if (ev && ev.title) events.push([d, ev]); }); });
+  const regular = (o.regular || []).filter(r => r && r.title && (r.days || []).length);
+  const quotes = (o.quotes || []).filter(q => q && q.text);
+  const journal = []; Object.keys(o.journalLog || {}).sort().forEach(d => { const txt = (o.journalLog[d] || []).map(e => e.text).filter(Boolean).join('\n\n'); if (txt) journal.push([d, txt]); });
+  const weekly = (o.weekly || []).filter(w => w && w.title);
+  return { areas, shifts, events, regular, quotes, principles: (o.principles || '').trim(), journal, weekly,
+    pick: { areas: true, shifts: true, events: true, regular: false, quotes: true, principles: true, journal: true, weekly: true },
+    areaSet: Object.fromEntries(areas.map(a => [a.id, { pillar: guessPillar(a.title + ' ' + (a.intro || '')), horizon: 'short' }])) };
+}
+function ptImportSheet() {
+  openSheet(`<h3>Import from PT app</h3>
+<p class="small">1. Open your <b>PT app</b> → More → Settings &amp; backup → <b>Copy backup</b>.<br>2. Come back here and paste it below (or pick a saved backup file).</p>
+<p class="small muted">This only reads the copy. Nothing in the PT app changes, and importing twice won't make duplicates.</p>
+<textarea id="pti_box" rows="6" placeholder="Paste the PT backup here"></textarea>
+<div class="row-btns"><button class="btn" data-act="ptiFile">Pick a backup file</button><button class="btn primary" data-act="ptiRead">Check what's in it</button></div>
+<input type="file" id="pti_file" accept="application/json,.json,.txt" hidden>`);
+  $('#pti_file').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { $('#pti_box').value = rd.result; ACT.ptiRead(); }; rd.readAsText(f); });
+}
+function ptPreview() {
+  const P = PTI, row = (k, label, n, sub) => n ? `<label class="check" style="margin-top:12px;align-items:flex-start"><input type="checkbox" data-pti="${k}" ${P.pick[k] ? 'checked' : ''}><span><b>${label}</b> <span class="muted">(${n})</span>${sub ? `<br><span class="small muted">${sub}</span>` : ''}</span></label>` : '';
+  const pOpts = sel => S.pillars.map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${p.icon} ${esc(p.name)}</option>`).join('');
+  let areaHtml = '';
+  if (P.areas.length) areaHtml = `<div class="list" style="margin-top:8px">${P.areas.map(a => `<div class="mrow" style="flex-wrap:wrap"><div class="tt" style="min-width:100%"><div class="title">${esc(a.title || 'Goal area')}</div><div class="meta">${(a.items || []).length} goals inside</div></div>
+<select data-pta="${a.id}" data-f="pillar" style="flex:1">${pOpts(P.areaSet[a.id].pillar)}</select><select data-pta="${a.id}" data-f="horizon" style="flex:1"><option value="short" ${P.areaSet[a.id].horizon === 'short' ? 'selected' : ''}>Short term</option><option value="mid" ${P.areaSet[a.id].horizon === 'mid' ? 'selected' : ''}>Mid term</option><option value="long" ${P.areaSet[a.id].horizon === 'long' ? 'selected' : ''}>Long term</option></select></div>`).join('')}</div>`;
+  const found = P.areas.length + P.shifts.length + P.events.length + P.regular.length + P.quotes.length + (P.principles ? 1 : 0) + P.journal.length + P.weekly.length;
+  openSheet(`<h3>Found in your PT app</h3>${!found ? '<div class="card empty">Nothing that fits the Life Planner was found in that backup.</div>' : ''}
+${row('areas', 'Goal areas → Goals', P.areas.length, 'Each area becomes a goal, its goals become steps (ticked ones stay done). Choose a pillar and timeframe for each:')}${P.areas.length ? areaHtml : ''}
+${row('shifts', 'Work shifts → Calendar', P.shifts.length, 'Last 2 weeks and everything ahead. Days you already set here are kept.')}
+${row('events', 'Upcoming calendar events → Tasks', P.events.length, 'Events from today onwards, with their times.')}
+${row('quotes', 'Quotes → Words to live by', P.quotes.length, 'They rotate on Today.')}
+${row('principles', 'Your principles → Philosophy', P.principles ? 1 : 0, 'Added to Vision & why.')}
+${row('journal', 'Journal entries → Journal', P.journal.length, 'Into the free-write box for each day.')}
+${row('weekly', 'Once-a-week jobs → Inbox', P.weekly.length, 'So you can turn them into tasks or repeats here.')}
+${row('regular', 'Regular schedule → Repeating tasks', P.regular.length, 'Off by default — training regulars already live in the PT app. Tick if you want them here too.')}
+${found ? `<div class="row-btns"><button class="btn primary" data-act="ptiGo">Import ticked items</button></div>` : ''}`);
+}
+function ptImport() {
+  const P = PTI, d = { goals: [], tasks: [], recurring: [], inbox: [] }, out = [];
+  if (P.pick.areas) P.areas.forEach(a => { const set = P.areaSet[a.id];
+    const why = [a.intro, a.current ? 'Where I am now: ' + a.current : '', a.later ? 'Later: ' + a.later : ''].filter(Boolean).join('\n\n');
+    d.goals.push({ id: 'pt-ga-' + a.id, title: a.title || 'Goal area', horizon: set.horizon, pillars: [set.pillar], why, sources: 'Imported from the PT app',
+      phases: [{ id: 'pt-ph-' + a.id, name: 'From PT app', steps: (a.items || []).filter(i => i && i.text).map(i => ({ id: 'pt-it-' + (i.id || uid()), title: i.text, status: i.done ? 'done' : 'todo', doneOn: i.done ? today() : '' })) }] }); });
+  const before = S.goals.length;
+  if (P.pick.shifts) { let n = 0; P.shifts.forEach(([dt, sh]) => { if (!S.shifts[dt]) { S.shifts[dt] = { start: sh.start, end: sh.end || '', label: sh.label || '' }; n++; } }); if (n) out.push(n + ' shifts'); }
+  if (P.pick.events) P.events.forEach(([dt, ev]) => d.tasks.push({ id: 'pt-ev-' + (ev.id || dt + ev.title), title: ev.title, date: dt, time: ev.start || '', tag: 'P', slot: ev.start ? (ev.start < '12:00' ? 'am' : ev.start < '17:00' ? 'pm' : 'eve') : 'any', status: ev.done ? 'done' : 'open' }));
+  if (P.pick.regular) P.regular.forEach(r => d.recurring.push({ id: 'pt-reg-' + r.id, title: r.title, tag: ((r.exIds || []).length || r.sessionId) ? 'T' : 'P', time: r.time || '', slot: r.time ? (r.time < '12:00' ? 'am' : r.time < '17:00' ? 'pm' : 'eve') : 'any', days: r.days.map(x => (Number(x) + 6) % 7), app: ((r.exIds || []).length || r.sessionId) ? 'PT app' : '' }));
+  if (P.pick.weekly) P.weekly.forEach(w => d.inbox.push({ id: 'pt-wk-' + w.id, text: w.title + (w.detail ? ' — ' + w.detail : ''), type: 'task', created: today() }));
+  const nt = S.tasks.length, nr = S.recurring.length, ni = S.inbox.length;
+  let addedSteps = 0;
+  d.goals = d.goals.filter(ng => { const og = goalById(ng.id); if (!og) return true;
+    const have = new Set(allSteps(og).map(x => x.id)), fresh = ng.phases[0].steps.filter(x => !have.has(x.id));
+    if (fresh.length) { let ph = og.phases.find(x => x.id === ng.phases[0].id) || og.phases[0]; if (!ph) og.phases.push(ph = { id: ng.phases[0].id, name: 'From PT app', steps: [] }); ph.steps.push(...fresh); addedSteps += fresh.length; }
+    return false; });
+  mergeData(d);
+  if (addedSteps) out.push(addedSteps + ' new goal steps');
+  if (S.goals.length - before) out.push((S.goals.length - before) + ' goals');
+  if (S.tasks.length - nt) out.push((S.tasks.length - nt) + ' events');
+  if (S.recurring.length - nr) out.push((S.recurring.length - nr) + ' repeating tasks');
+  if (S.inbox.length - ni) out.push((S.inbox.length - ni) + ' inbox items');
+  if (P.pick.quotes) { let n = 0; P.quotes.forEach(q => { const line = q.text.trim() + (q.by ? ' — ' + q.by.trim() : ''); if (!S.vision.quotes.includes(line)) { S.vision.quotes.push(line); n++; } }); if (n) out.push(n + ' quotes'); }
+  if (P.pick.principles && P.principles && !S.vision.philosophy.includes(P.principles.slice(0, 40))) { S.vision.philosophy = S.vision.philosophy ? S.vision.philosophy + '\n\n' + P.principles : P.principles; out.push('your principles'); }
+  if (P.pick.journal) { let n = 0; P.journal.forEach(([dt, txt]) => { const j = S.journal[dt] = S.journal[dt] || {}; if (!(j.free || '').includes(txt.slice(0, 40))) { j.free = j.free ? j.free + '\n\n' + txt : txt; n++; } }); if (n) out.push(n + ' journal days'); }
+  S.lastPtImport = today();
+  save(); closeSheet(); render();
+  toast(out.length ? 'Imported ' + out.join(', ') : 'Already up to date — nothing new to add');
+}
+Object.assign(ACT, {
+  ptImport: () => ptImportSheet(),
+  ptiFile: () => $('#pti_file').click(),
+  ptiRead: () => { let o; try { o = JSON.parse($('#pti_box').value); } catch (e) { toast("That isn't a PT backup. Use Copy backup in the PT app."); return; }
+    if (!o || !o.settings || !Array.isArray(o.sessions)) { toast("That isn't a PT backup. Use Copy backup in the PT app."); return; }
+    PTI = ptAnalyse(o); ptPreview(); },
+  ptiGo: () => ptImport()
+});
+document.addEventListener('change', e => {
+  const el = e.target; if (!PTI) return;
+  if (el.dataset.pti) PTI.pick[el.dataset.pti] = el.checked;
+  if (el.dataset.pta) PTI.areaSet[el.dataset.pta][el.dataset.f] = el.value;
+});
 
 /* ---------- backup ---------- */
 async function exportBackup() {

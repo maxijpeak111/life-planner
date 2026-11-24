@@ -186,3 +186,4 @@ a{color:var(--accent-ink)}
 .quote span{flex:1}
 .locked{font-family:var(--serif);text-align:center;padding:18px;color:var(--muted)}
 .jprev{font-size:13px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet label.check>span{flex:1;min-width:0;overflow-wrap:anywhere}
