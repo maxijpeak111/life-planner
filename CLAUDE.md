@@ -29,5 +29,6 @@ NOTE: the repo is public — keep personal/sensitive details out of updates.json
   "vision": { "identity": "", "philosophy": "", "idealDay": "", "quotes": [] } } } ] }
 ```
 To link existing goals without touching their steps, use `"goalLinks": [ { "id": "g-x", "feeds": ["g-bigger"], "horizon": "mid", "start": "2027-01-01" } ]` in `data` (feeds are added, never removed). Goals form a ladder: steps → short → mid → long; `rollPct()` rolls feeder progress up. Goals may have an optional `start` date.
+To move goals between pillars use `"goalPillars": [ { "id": "g-x", "pillars": ["travel", "life"] } ]` (sets pillars exactly; remembered in `S.goalPillarFix` so it also applies to goals imported later). Goals tab: picking a pillar shows that pillar's path, short → mid → long, each level by date (deadline, else start).
 Default pillar ids: physical, ptbiz, money, travel, life, spanish.
 Goal step research must be accurate and sourced (Maxi's rule: no generic or inaccurate info).

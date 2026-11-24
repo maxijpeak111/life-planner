@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.3';
+const VERSION = '2.4';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -462,6 +462,7 @@ function renderGoals() {
   let h = `<div class="page-top"><h2>Goals</h2><button class="btn sm" data-act="newGoal">＋ Goal</button></div><div class="wrap" style="padding-top:4px">
 <div class="seg">${[['path', '🧭 Path'], ['short', 'Short'], ['mid', 'Mid'], ['long', 'Long']].map(([k, l]) => `<button class="${!G.archived && G.h === k ? 'on' : ''}" data-act="goalH" data-v="${k}">${l}</button>`).join('')}</div>
 <div class="chips scroll" style="margin-top:10px"><button class="chip ${G.p === 'all' ? 'on' : ''}" data-act="goalP" data-v="all">All</button>${S.pillars.map(p => `<button class="chip ${G.p === p.id ? 'on' : ''}" data-act="goalP" data-v="${p.id}">${p.icon} ${esc(p.name)}</button>`).join('')}<button class="chip" data-act="managePillars">⚙︎ Pillars</button></div>`;
+  if (!G.archived && G.p !== 'all') return h.replace(/<div class="seg">[\s\S]*?<\/div>\n/, '') + pillarPath(G.p) + '</div>';
   if (!G.archived && G.h === 'path') return h + goalPath() + '</div>';
   if (G.archived) h += `<div class="sect"><span class="grow">Achieved & archived</span><button data-act="goalArchived">Back</button></div>`;
   if (!list.length) h += `<div class="card empty" style="margin-top:12px">${G.archived ? 'Nothing here yet.' : 'No goals here yet. Add one, or ask Claude to research a goal and send it in with full steps.'}</div>`;
@@ -490,6 +491,24 @@ function goalPath() {
   if (loose.length) h += `<div class="sect">Not linked yet</div><p class="small muted">Link each one to the bigger goal it builds toward.</p><div class="list">${loose.map(g => `<div class="mrow"><div class="tt"><div class="title">${esc(g.title)}</div><div class="meta">${HZN[g.horizon]} term</div></div><button class="btn sm" data-act="linkUp" data-id="${g.id}">Link ↑</button></div>`).join('')}</div>`;
   if (!act.some(g => g.horizon === 'long')) h += `<button class="btn full" style="margin-top:14px" data-act="newGoal">＋ Your overall long-term goal</button>`;
   return h;
+}
+function goalDate(g) { return g.deadline || g.start || ''; }
+function pillarPath(pid) {
+  const pl = pillarById(pid); if (!pl) return '';
+  const gs = activeGoals().filter(g => g.pillars.includes(pid));
+  let h = `<div class="pp-head"><span class="pp-ic">${pl.icon}</span><div><div class="gt">${esc(pl.name)}</div><div class="small muted">${gs.length} goal${gs.length === 1 ? '' : 's'} · short term first</div></div></div>`;
+  if (!gs.length) return h + `<div class="card empty" style="margin-top:12px">No goals on this pillar yet.</div><button class="btn full" style="margin-top:12px" data-act="newGoal">＋ Goal</button>`;
+  h += '<div class="ppath">';
+  ['short', 'mid', 'long'].forEach(hz => {
+    const lv = gs.filter(g => g.horizon === hz).sort((a, b) => (goalDate(a) || '9999').localeCompare(goalDate(b) || '9999') || a.title.localeCompare(b.title));
+    if (!lv.length) return;
+    h += `<div class="pp-lv"><span class="pp-lab">${HZN[hz]} term</span></div>`;
+    lv.forEach(g => { const p = rollPct(g), ns = nextStep(g), others = g.pillars.filter(x => x !== pid).map(pillarById).filter(Boolean), d = goalDate(g);
+      h += `<button class="pp-node hz-${hz}" data-act="openGoal" data-id="${g.id}"><span class="pp-dot"></span><div class="tt"><div class="title">${esc(g.title)}</div>
+<div class="meta">${d ? (g.deadline ? 'by ' : 'from ') + fmt(d, { day: 'numeric', month: 'short', year: 'numeric' }) : 'No date yet'}${others.length ? ' · also on ' + others.map(o => o.icon).join(' ') : ''}</div>
+<div class="bar"><i style="width:${p}%"></i></div><div class="meta">${p}%${ns ? ' · next: ' + esc(ns.title) : allSteps(g).length ? ' · all steps done' : ' · no steps yet'}</div></div></button>`; });
+  });
+  return h + '</div>';
 }
 function linkSheet(g, dir) {
   const cand = activeGoals().filter(x => x.id !== g.id && (dir === 'up' ? HZO[x.horizon] >= HZO[g.horizon] : HZO[x.horizon] <= HZO[g.horizon])).sort((a, b) => HZO[b.horizon] - HZO[a.horizon]);
@@ -1549,6 +1568,9 @@ function mergeData(d) {
     delete ng.replaceSteps;
     Object.assign(og, ng, { archived: og.archived, achieved: og.achieved, archiveNote: og.archiveNote });
   });
+  /* goalPillars: set which pillars existing goals sit on (nothing else changes) */
+  (d.goalPillars || []).forEach(p => { if (!Array.isArray(p.pillars)) return; S.goalPillarFix = S.goalPillarFix || {}; S.goalPillarFix[p.id] = p.pillars; });
+  S.goals.forEach(g => { const fx = S.goalPillarFix && S.goalPillarFix[g.id]; if (fx) g.pillars = fx.filter(x => pillarById(x)); });
   /* goalLinks: patch links/timeframe on existing goals without touching their steps */
   (d.goalLinks || []).forEach(p => { const g = goalById(p.id); if (!g) return; if (p.feeds) p.feeds.forEach(f => { if (f !== g.id && !g.feeds.includes(f)) g.feeds.push(f); }); if (p.horizon) g.horizon = p.horizon; if (p.start && !g.start) g.start = p.start; if (p.deadline && !g.deadline) g.deadline = p.deadline; });
   ['tasks', 'habits', 'inbox', 'wins', 'people', 'reading', 'admin', 'timeline', 'travel', 'templates', 'recurring'].forEach(k => {
