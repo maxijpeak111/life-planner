@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.2';
+const VERSION = '1.3';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -161,8 +161,10 @@ function ensureRecurring(date) {
   }
   if (added) saveSoon();
 }
-function dayTasks(date) { ensureRecurring(date); return S.tasks.filter(t => t.date === date && t.status !== 'dropped').sort(sortTasks); }
-function slipped() { const t = today(); return S.tasks.filter(x => x.status === 'open' && x.date < t && !x.recurringId); }
+function dayTasks(date) { ensureRecurring(date); return S.tasks.filter(t => t.date === date && t.status !== 'dropped' && t.kind !== 'plan').sort(sortTasks); }
+function slipped() { const t = today(); return S.tasks.filter(x => x.status === 'open' && x.date < t && !x.recurringId && x.kind !== 'plan'); }
+const isPlan = t => t.kind === 'plan';
+function dayPlans(date) { return S.tasks.filter(t => t.date === date && isPlan(t) && t.status !== 'dropped').sort((a, b) => (a.allDay ? '' : a.time || '99').localeCompare(b.allDay ? '' : b.time || '99')); }
 
 /* habits */
 function habitDone(hid, d) { return !!(S.habitLog[d] && S.habitLog[d][hid]); }
@@ -171,7 +173,7 @@ function activeHabits() { return S.habits.filter(h => h.active !== false); }
 
 /* stats */
 function statsRange(from, to) {
-  const ts = S.tasks.filter(t => t.date >= from && t.date <= to && t.status !== 'dropped');
+  const ts = S.tasks.filter(t => t.date >= from && t.date <= to && t.status !== 'dropped' && !isPlan(t));
   const byTag = {}; TAGS.forEach(k => byTag[k] = { planned: 0, done: 0, mins: 0 });
   const byPillar = {};
   ts.forEach(t => {
@@ -339,9 +341,11 @@ function comingUp() {
   const t = today(), end = addDays(t, 14), items = [];
   S.goals.forEach(g => { if (!g.archived && !g.achieved && g.deadline && g.deadline >= t && g.deadline <= end) items.push([g.deadline, '⛰ ' + g.title]); });
   S.timeline.forEach(e => { if (e.date && e.date >= t && e.date <= end) items.push([e.date, e.title]); });
+  const nowHM = z(new Date().getHours()) + ':' + z(new Date().getMinutes());
+  S.tasks.forEach(p => { if (isPlan(p) && p.status !== 'dropped' && p.date >= t && p.date <= end && !(p.date === t && (p.end && p.end !== 'late' ? p.end : p.time || '99') < nowHM)) items.push([p.date, '◆ ' + p.title + (p.allDay ? '' : p.time ? ' ' + p.time : ''), p.date + (p.allDay ? '' : p.time || '')]); });
   S.admin.forEach(a => { if (!a.done && a.date && a.date >= t && a.date <= end) items.push([a.date, a.title]); });
   S.people.forEach(p => { if (p.date && p.date >= t && p.date <= end) items.push([p.date, p.name + (p.next ? ' · ' + p.next : '')]); });
-  items.sort((a, b) => a[0].localeCompare(b[0]));
+  items.sort((a, b) => (a[2] || a[0]).localeCompare(b[2] || b[0]));
   return items;
 }
 function renderToday() {
@@ -362,6 +366,7 @@ function renderToday() {
 <p class="line">${esc(dailyLine())}</p>
 ${yChange ? `<p class="line-sub">Yesterday you said: <i>${esc(yChange)}</i></p>` : ''}
 ${nudges()}
+${plansBlock(t, 'Plans today')}
 <div class="sect"><span class="grow">Priorities</span><button data-act="fromGoals" data-v="${t}">＋ From goals</button></div>
 ${pri.length ? `<div class="list">${pri.map(x => taskRow(x)).join('')}</div>` : `<div class="list"><div class="empty">Star ★ a task to pin it here.</div></div>`}
 <div class="tiles">
@@ -389,6 +394,7 @@ function calDay() {
   const d = V.cal.date, ts = dayTasks(d), st = statsRange(d, d);
   return dnav(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (d === today() ? ' · Today' : ''), 1) +
     `<div class="card" style="display:flex;align-items:center;gap:10px"><span style="flex:1">${shiftText(d) || '<span class="muted">No shift entered</span>'}</span><button class="btn sm" data-act="editShift" data-v="${d}">Shift</button><button class="btn sm" data-act="applyTemplate" data-v="${d}">Template</button><button class="btn sm" data-act="fromGoals" data-v="${d}">Goals</button></div>
+${plansBlock(d)}
 ${ts.filter(t => t.priority).length ? `<div class="sect">Priorities</div><div class="list">${ts.filter(t => t.priority).map(x => taskRow(x)).join('')}</div>` : ''}
 <div class="sect">Plan</div>${slotList(ts.filter(t => !t.priority), 'Nothing planned. Tap + to add.')}
 <div class="sect">How this day went</div>${statsHtml(st)}`;
@@ -400,7 +406,7 @@ function calWeek() {
   for (let i = 0; i < 7; i++) {
     const d = addDays(ws, i), ts = dayTasks(d), st = statsRange(d, d);
     h += `<button class="wday ${d === t ? 'today' : ''}" data-act="calDay" data-v="${d}"><div class="wh"><b>${fmt(d, { weekday: 'short', day: 'numeric' })}</b><span>${shiftText(d) ? `<span class="shiftpill">${esc(shiftText(d))}</span>` : ''} ${ts.length ? st.pct + '%' : ''}</span></div>
-${ts.slice(0, 8).map(x => `<div class="wline ${x.status === 'done' ? 'done' : ''}"><i class="dot dot-${x.tag}"></i><span>${x.priority ? '★ ' : ''}${esc(x.title)}</span></div>`).join('')}${ts.length > 8 ? `<div class="small muted" style="margin-top:4px">+${ts.length - 8} more</div>` : ''}${!ts.length ? '<div class="small muted" style="margin-top:4px">Nothing planned</div>' : ''}</button>`;
+${dayPlans(d).map(x => `<div class="wline"><i class="dot" style="background:${KIND[x.cat || 'social'].color}"></i><span><b>◆ ${x.allDay ? 'All day' : esc(x.time || '')}</b> ${esc(x.title)}</span></div>`).join('')}${ts.slice(0, 8).map(x => `<div class="wline ${x.status === 'done' ? 'done' : ''}"><i class="dot dot-${x.tag}"></i><span>${x.priority ? '★ ' : ''}${esc(x.title)}</span></div>`).join('')}${ts.length > 8 ? `<div class="small muted" style="margin-top:4px">+${ts.length - 8} more</div>` : ''}${!ts.length && !dayPlans(d).length ? '<div class="small muted" style="margin-top:4px">Nothing planned</div>' : ''}</button>`;
   }
   h += `<div class="sect">This week</div>` + statsHtml(statsRange(ws, we));
   return h;
@@ -412,12 +418,13 @@ function calMonth() {
   for (let i = 0; i < pad; i++) h += '<div class="mcell out"></div>';
   for (let n = 1; n <= days; n++) {
     const d = mk + '-' + z(n);
-    const ts = S.tasks.filter(x => x.date === d && x.status !== 'dropped');
+    const ts = S.tasks.filter(x => x.date === d && x.status !== 'dropped' && !isPlan(x));
+    const hasPlan = dayPlans(d).length;
     const tags = [...new Set(ts.map(x => x.tag))];
     const flag = S.goals.some(g => g.deadline === d && !g.archived) || S.timeline.some(e => e.date === d) ? '⛳' : '';
-    h += `<button class="mcell ${d === t ? 'today' : ''}" data-act="calDay" data-v="${d}"><span>${n}</span>${S.shifts[d] && !S.shifts[d].off ? '<span class="flag">💼</span>' : ''}${flag ? `<span class="flag">${flag}</span>` : ''}<span class="dots">${tags.map(k => `<i class="dot dot-${k}"></i>`).join('')}</span></button>`;
+    h += `<button class="mcell ${d === t ? 'today' : ''}" data-act="calDay" data-v="${d}"><span>${n}</span>${S.shifts[d] && !S.shifts[d].off ? '<span class="flag">💼</span>' : ''}${hasPlan ? '<span class="flag">◆</span>' : ''}${flag ? `<span class="flag">${flag}</span>` : ''}<span class="dots">${tags.map(k => `<i class="dot dot-${k}"></i>`).join('')}</span></button>`;
   }
-  h += '</div><div class="small muted" style="margin-top:8px">💼 shift · ⛳ deadline or event · dots = task types</div>';
+  h += '</div><div class="small muted" style="margin-top:8px">💼 shift · ◆ plan · ⛳ deadline or event · dots = task types</div>';
   const st = statsRange(mk + '-01', mk + '-' + z(days));
   return h + `<div class="sect">This month</div>` + statsHtml(st);
 }
@@ -655,27 +662,7 @@ function readForm() {
 }
 
 /* task sheet */
-let TF = null;
-function taskSheet(task, dflt = {}) {
-  const isNew = !task;
-  TF = normTask(task ? { ...task } : { date: V.tab === 'calendar' && V.cal.mode === 'day' ? V.cal.date : today(), ...dflt });
-  TF._new = isNew;
-  const goals = activeGoals();
-  openSheet(`<h3>${isNew ? 'New task' : 'Edit task'}</h3>
-<input id="tf_title" value="${esc(TF.title)}" placeholder="What needs doing?" autocomplete="off">
-${isNew ? '<div class="hint">Shortcuts: start with T/S/B/P, end with 30m, 1h, am, pm, eve, @14:00 or !</div>' : ''}
-<div class="lbl">Type</div><div class="chips" id="tf_tag">${TAGS.map(k => `<button class="chip ${TF.tag === k ? 'on' : ''}" data-act="tfChip" data-g="tag" data-v="${k}"><span class="dot dot-${k}"></span> ${TAGN[k]}</button>`).join('')}</div>
-<div class="lbl">When in the day</div><div class="chips" id="tf_slot">${SLOTS.map(([k, l]) => `<button class="chip ${TF.slot === k ? 'on' : ''}" data-act="tfChip" data-g="slot" data-v="${k}">${l}</button>`).join('')}</div>
-<div class="two"><label>Date<input type="date" id="tf_date" value="${TF.date}"></label><label>Rough time (optional)<input type="time" id="tf_time" value="${TF.time}"></label></div>
-<div class="lbl">Length (optional)</div><div class="chips" id="tf_length">${[15, 30, 45, 60, 90, 120].map(m => `<button class="chip ${Number(TF.length) === m ? 'on' : ''}" data-act="tfChip" data-g="length" data-v="${m}">${fmtLen(m)}</button>`).join('')}</div>
-<label class="check" style="margin-top:14px"><input type="checkbox" id="tf_pri" ${TF.priority ? 'checked' : ''}> ★ Priority</label>
-<label>Linked goal (optional)<select id="tf_goal" data-chg="tfGoal"><option value="">— none —</option>${goals.map(g => `<option value="${g.id}" ${TF.goalId === g.id ? 'selected' : ''}>${esc(g.title)}</option>`).join('')}</select></label>
-<label id="tf_steplab" style="${TF.goalId ? '' : 'display:none'}">Goal step<select id="tf_step">${stepOptions(TF.goalId, TF.stepId)}</select></label>
-<label>Open an app (optional)<select id="tf_app"><option value="">— none —</option>${S.apps.map(a => `<option ${TF.app === a.name ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
-<label>Note<textarea id="tf_note" rows="2">${esc(TF.note)}</textarea></label>
-<div class="row-btns">${!isNew ? `<button class="btn danger" data-act="tfDelete">Remove</button>` : ''}<button class="btn primary" data-act="tfSave">${isNew ? 'Add' : 'Save'}</button></div>`);
-  if (isNew) setTimeout(() => { const el = $('#tf_title'); el && el.focus(); }, 60);
-}
+/* (task sheet lives in the "add / edit item" section below) */
 function stepOptions(gid, sel) { const g = gid && goalById(gid); if (!g) return '<option value="">—</option>'; return '<option value="">— whole goal —</option>' + g.phases.map(p => `<optgroup label="${esc(p.name)}">${p.steps.map(s => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.title)}${s.status === 'done' ? ' ✓' : ''}</option>`).join('')}</optgroup>`).join(''); }
 function parseQuick(text) {
   let w = text.trim().split(/\s+/).filter(Boolean); const set = {};
@@ -696,6 +683,180 @@ function parseQuick(text) {
   }
   return { title: w.join(' '), set };
 }
+
+/* ---------- add / edit item (option B: one smart line) ---------- */
+const WDAYS = [['mon', 'monday'], ['tue', 'tues', 'tuesday'], ['wed', 'weds', 'wednesday'], ['thu', 'thur', 'thurs', 'thursday'], ['fri', 'friday'], ['sat', 'saturday'], ['sun', 'sunday']];
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+function toHM(h, m, ap) { h = Number(h); m = Number(m || 0); if (ap === 'pm' && h < 12) h += 12; if (ap === 'am' && h === 12) h = 0; if (h > 23 || m > 59) return null; return z(h) + ':' + z(m); }
+function readTime(w) { const m = w.match(/^@?(\d{1,2})(?:[:.](\d{2}))?(am|pm)?$/); if (!m) return null; if (!m[2] && !m[3] && !w.startsWith('@')) return null; return toHM(m[1], m[2], m[3]); }
+function guessKind(t) {
+  t = ' ' + (t || '').toLowerCase() + ' ';
+  if (/dentist|doctor|\bgp\b|appointment|appt|hospital|physio|optician|barber|haircut|interview|bank /.test(t)) return 'appt';
+  if (/staff|work|shift|meeting|training day|rota|manager|team /.test(t)) return 'work';
+  if (/mum|dad|nan|gran|brother|sister|family|cousin|birthday|auntie|uncle/.test(t)) return 'family';
+  if (/flight|train|trip|holiday|airport|travel|hotel|coach /.test(t)) return 'travel';
+  if (/race|match|game|gym|class|run|marathon|parkrun|climb|mma|sparring|fight|swim|hike|event|gig|concert|festival/.test(t)) return 'sport';
+  return 'social';
+}
+function parseSmart(text, ign) {
+  const words = text.trim().split(/\s+/).filter(Boolean), out = [], set = {}, t = today();
+  const pre = () => { const l = (out[out.length - 1] || '').toLowerCase(); if (['at', 'on', 'from', '@'].includes(l)) out.pop(); };
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i], l = w.toLowerCase().replace(/[,.]$/, ''), nx = (words[i + 1] || '').toLowerCase();
+    let m, d;
+    if (i === 0 && words.length > 1 && /^[tsbp]$/i.test(w) && !ign.tag) { set.tag = w.toUpperCase(); continue; }
+    if (l === '!' && !ign.priority) { set.priority = true; continue; }
+    if (!ign.length && (m = l.match(/^(\d+)(m|min|mins)$/))) { set.length = Number(m[1]); continue; }
+    if (!ign.length && (m = l.match(/^(\d+(?:\.\d+)?)(h|hr|hrs)$/))) { set.length = Math.round(parseFloat(m[1]) * 60); continue; }
+    if (!ign.date) {
+      if (['today', 'tonight'].includes(l)) { pre(); set.date = t; if (l === 'tonight') set.slot = 'eve'; continue; }
+      if (['tomorrow', 'tmr', 'tmrw', 'tomoz'].includes(l)) { pre(); set.date = addDays(t, 1); continue; }
+      const nxt = l === 'next' && WDAYS.findIndex(a => a.includes(nx)) >= 0;
+      const wi = WDAYS.findIndex(a => a.includes(nxt ? nx : l));
+      if (wi >= 0) { pre(); let diff = (wi - dow(t) + 7) % 7; if (nxt) { diff = diff || 7; i++; } set.date = addDays(t, diff); continue; }
+      if ((m = l.match(/^(\d{1,2})\/(\d{1,2})$/))) { pre(); let y = Number(t.slice(0, 4)); d = y + '-' + z(m[2]) + '-' + z(m[1]); if (d < t) d = (y + 1) + d.slice(4); set.date = d; continue; }
+      if ((m = l.match(/^(\d{1,2})(st|nd|rd|th)?$/)) && MONTHS.includes(nx.slice(0, 3))) { pre(); let y = Number(t.slice(0, 4)); d = y + '-' + z(MONTHS.indexOf(nx.slice(0, 3)) + 1) + '-' + z(m[1]); if (d < t) d = (y + 1) + d.slice(4); set.date = d; i++; continue; }
+    }
+    if (!ign.time) {
+      if (l === 'all' && nx === 'day') { set.allDay = true; i++; continue; }
+      if (l === 'allday') { set.allDay = true; continue; }
+      if ((m = l.match(/^(.+?)[-–](.+)$/))) { const a = readTime(m[1].match(/(am|pm)$/) || m[1].includes(':') ? m[1] : m[1] + (m[2].match(/(am|pm)$/) || [''])[0]), b = m[2] === 'late' ? 'late' : readTime(m[2].match(/(am|pm)$/) || m[2].includes(':') ? m[2] : m[2] + (m[1].match(/(am|pm)$/) || [''])[0]); if (a && b) { pre(); set.time = a; set.end = b; continue; } }
+      if (/^\d{1,2}([:.]\d{2})?$/.test(l) && ['am', 'pm'].includes(nx)) { const tm = readTime(l + nx); if (tm) { pre(); set.time = tm; i++; continue; } }
+      const tm = readTime(l); if (tm) { pre(); set.time = tm; continue; }
+      if (['till', 'until', 'to'].includes(l) && set.time && (nx === 'late' || readTime(nx))) { set.end = nx === 'late' ? 'late' : readTime(nx); i++; continue; }
+    }
+    if (!ign.slot && i > 0) {
+      const sl = { am: 'am', morning: 'am', pm: 'pm', afternoon: 'pm', eve: 'eve', evening: 'eve' }[l]; if (sl) { set.slot = sl; continue; }
+    }
+    out.push(w);
+  }
+  if (!ign.cat && out.length) set.cat = guessKind(out.join(' '));
+  return { title: out.join(' '), set };
+}
+let IT = null;
+const PLAN_KINDS = [['social', 'Social', '#E59A6A'], ['work', 'Work', '#9AA6BC'], ['family', 'Family', '#D98BA8'], ['sport', 'Sport / event', '#3FA79B'], ['appt', 'Appointment', '#7C93D6'], ['travel', 'Travel', '#D9A441']];
+const KIND = Object.fromEntries(PLAN_KINDS.map(k => [k[0], { name: k[1], color: k[2] }]));
+function taskSheet(item, dflt = {}) {
+  const isNew = !item;
+  const base = item ? { ...item } : normTask({ date: V.tab === 'calendar' && V.cal.mode === 'day' ? V.cal.date : today(), ...dflt });
+  IT = { isNew, id: base.id, kind: base.kind === 'plan' ? 'plan' : (dflt.kind || 'task'), text: base.title || '', base, manual: {}, ign: {}, more: !isNew, parsed: { title: base.title || '', set: {} } };
+  if (!isNew) IT.manual = { ...base };
+  openSheet(`<h3>${isNew ? 'Add' : IT.kind === 'plan' ? 'Edit plan' : 'Edit task'}</h3>
+<div class="seg" id="it_kind"><button data-act="itKind" data-v="task">✓ Task</button><button data-act="itKind" data-v="plan">◆ Plan</button></div>
+<input id="it_text" class="bigin" autocomplete="off" value="${esc(IT.text)}">
+<div id="it_parse" class="parse"></div>
+<div class="lbl">Day</div><div class="chips scroll" id="it_days"></div>
+<button class="more-btn" data-act="itMore" id="it_morebtn"></button>
+<div id="it_more"></div>
+<div class="row-btns">${!isNew ? `<button class="btn danger" data-act="itDelete">Remove</button>` : ''}<button class="btn primary" data-act="itSave" id="it_save"></button></div>`);
+  itRefresh(true);
+  if (isNew) setTimeout(() => { const el = $('#it_text'); el && el.focus(); }, 60);
+}
+function itVals() { const p = IT.isNew ? IT.parsed.set : {}; return { ...IT.base, ...p, ...IT.manual }; }
+function itRefresh(full) {
+  if (!IT) return;
+  const v = itVals(), plan = IT.kind === 'plan', t = today();
+  document.querySelectorAll('#it_kind button').forEach(b => b.classList.toggle('on', b.dataset.v === IT.kind));
+  $('#it_text').placeholder = plan ? 'e.g. Staff do thu 7pm-late' : 'e.g. S Spanish 20m am !';
+  const chips = [];
+  if (IT.isNew && IT.text.trim()) {
+    const ps = IT.parsed.set, fromP = k => ps[k] !== undefined && IT.manual[k] === undefined;
+    chips.push(`<span class="pchip k">${plan ? '◆ Plan' : '✓ Task'}</span>`);
+    if (fromP('date')) chips.push(`<span class="pchip">${v.date === t ? 'Today' : fmt(v.date)}<button data-act="itIgn" data-v="date">✕</button></span>`);
+    if (fromP('time') || fromP('end')) chips.push(`<span class="pchip">${v.time || ''}${v.end ? '–' + v.end : ''}<button data-act="itIgn" data-v="time">✕</button></span>`);
+    if (fromP('allDay')) chips.push(`<span class="pchip">All day<button data-act="itIgn" data-v="time">✕</button></span>`);
+    if (fromP('length')) chips.push(`<span class="pchip">${fmtLen(v.length)}<button data-act="itIgn" data-v="length">✕</button></span>`);
+    if (fromP('slot')) chips.push(`<span class="pchip">${SLOTN[v.slot]}<button data-act="itIgn" data-v="slot">✕</button></span>`);
+    if (plan && fromP('cat')) chips.push(`<span class="pchip"><span class="dot" style="background:${KIND[v.cat].color}"></span> ${KIND[v.cat].name}<button data-act="itIgn" data-v="cat">✕</button></span>`);
+    if (fromP('tag')) chips.push(`<span class="pchip">${TAGN[v.tag]}<button data-act="itIgn" data-v="tag">✕</button></span>`);
+    if (fromP('priority')) chips.push(`<span class="pchip">★ Priority<button data-act="itIgn" data-v="priority">✕</button></span>`);
+  }
+  $('#it_parse').innerHTML = chips.length > 1 ? `<span class="small muted">Understood:</span> ${chips.join('')}` : (IT.isNew ? `<span class="small muted">${plan ? 'Type the plan with its day and time, like “gym class fri 6pm”.' : 'Shortcuts: start with T/S/B/P · 20m · am/pm/eve · ! for priority · a day like “thu”.'}</span>` : '');
+  let days = ''; for (let i = 0; i < 7; i++) { const d = addDays(t, i); days += `<button class="chip ${v.date === d ? 'on' : ''}" data-act="itDay" data-v="${d}">${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : fmt(d, { weekday: 'short', day: 'numeric' })}</button>`; }
+  const other = v.date < t || v.date > addDays(t, 6);
+  days += `<button class="chip ${other ? 'on' : ''}" data-act="itPickDate">${other ? fmt(v.date) : 'Pick date…'}</button>`;
+  $('#it_days').innerHTML = days;
+  $('#it_morebtn').textContent = IT.more ? '− Fewer details' : (plan ? '＋ More details (end time, kind, prep list, goal)' : '＋ More details (type, time, length, goal, note)');
+  $('#it_save').textContent = IT.isNew ? (plan ? 'Add plan' : 'Add task') : 'Save';
+  if (full) itMoreHtml();
+}
+function itMoreHtml() {
+  const box = $('#it_more'); if (!IT.more) { box.innerHTML = ''; return; }
+  const v = itVals(), plan = IT.kind === 'plan';
+  let h = `<div class="two"><label>Date<input type="date" data-it="date" value="${v.date || ''}"></label><label>${plan ? 'Starts' : 'Rough time'}<input type="time" data-it="time" value="${v.time || ''}"></label></div>`;
+  if (plan) {
+    h += `<div class="two"><label>Ends<input type="time" data-it="end" value="${v.end && v.end !== 'late' ? v.end : ''}"></label><label class="check" style="margin-top:30px"><input type="checkbox" data-it="late" ${v.end === 'late' ? 'checked' : ''}> Till late</label></div>
+<label class="check"><input type="checkbox" data-it="allDay" ${v.allDay ? 'checked' : ''}> All day</label>
+<div class="lbl">Kind of plan</div><div class="chips">${PLAN_KINDS.map(([k, l, c]) => `<button class="chip ${(v.cat || 'social') === k ? 'on' : ''}" data-act="itSet" data-k="cat" data-v="${k}"><span class="dot" style="background:${c}"></span> ${l}</button>`).join('')}</div>
+<div class="lbl">Prep checklist</div><div class="list" style="margin-top:6px">${(v.prep || []).map(x => `<div class="task"><button class="chk ${x.done ? 'on' : ''}" data-act="itPrepTog" data-id="${x.id}" style="${x.done ? 'background:var(--accent);border-color:var(--accent)' : ''}"></button><div class="tt"><div class="title" style="${x.done ? 'text-decoration:line-through;color:var(--faint)' : ''}">${esc(x.text)}</div></div><button class="small muted" data-act="itPrepDel" data-id="${x.id}">✕</button></div>`).join('')}
+<div class="task"><input id="it_prep" placeholder="e.g. book taxi, buy gift" style="flex:1"><button class="btn sm" data-act="itPrepAdd">Add</button></div></div>
+${(v.prep || []).some(x => !x.done) ? `<label class="check"><input type="checkbox" data-it="prepToDay" ${IT.manual.prepToDay ? 'checked' : ''}> Put unticked prep on the day before as tasks</label>` : ''}`;
+  } else {
+    h += `<div class="lbl">When in the day</div><div class="chips">${SLOTS.map(([k, l]) => `<button class="chip ${v.slot === k ? 'on' : ''}" data-act="itSet" data-k="slot" data-v="${k}">${l}</button>`).join('')}</div>
+<div class="lbl">Length</div><div class="chips">${[15, 30, 45, 60, 90, 120].map(m => `<button class="chip ${Number(v.length) === m ? 'on' : ''}" data-act="itSet" data-k="length" data-v="${m}">${fmtLen(m)}</button>`).join('')}</div>
+<label class="check" style="margin-top:12px"><input type="checkbox" data-it="priority" ${v.priority ? 'checked' : ''}> ★ Priority</label>`;
+  }
+  if (!plan) h += `<div class="lbl">Type</div><div class="chips">${TAGS.map(k => `<button class="chip ${v.tag === k ? 'on' : ''}" data-act="itSet" data-k="tag" data-v="${k}"><span class="dot dot-${k}"></span> ${TAGN[k]}</button>`).join('')}</div>`;
+  {
+    const goals = activeGoals();
+    h += `<label>Linked goal<select data-it="goalId" data-chg="itGoal"><option value="">— none —</option>${goals.map(g => `<option value="${g.id}" ${v.goalId === g.id ? 'selected' : ''}>${esc(g.title)}</option>`).join('')}</select></label>
+<label id="it_steplab" style="${v.goalId ? '' : 'display:none'}">Goal step<select id="it_step" data-it="stepId">${stepOptions(v.goalId, v.stepId)}</select></label>
+${plan ? '' : `<label>Open an app<select data-it="app"><option value="">— none —</option>${S.apps.map(a => `<option ${v.app === a.name ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`}`;
+  }
+  if (!plan) h += `<label>Note<textarea data-it="note" rows="2">${esc(v.note || '')}</textarea></label>`;
+  box.innerHTML = h;
+}
+function planRow(p, opts = {}) {
+  const tm = p.allDay ? 'All day' : (p.time ? p.time + (p.end ? '–' + p.end : '') : '');
+  const pr = p.prep || [], g = p.goalId && goalById(p.goalId), k = KIND[p.cat || 'social'];
+  const meta = [opts.showDate ? fmt(p.date) : '', tm, k.name, pr.length ? 'Prep ' + pr.filter(x => x.done).length + '/' + pr.length : '', g ? '⛰ ' + g.title : ''].filter(Boolean).join(' · ');
+  return `<div class="plan" data-act="editTask" data-id="${p.id}"><span class="pbar" style="background:${k.color}"></span><div class="tt"><div class="title">${esc(p.title)}</div>${meta ? `<div class="meta">${esc(meta)}</div>` : ''}</div></div>`;
+}
+function shiftRow(d) { const s = S.shifts[d]; if (!s || s.off) return ''; return `<div class="plan" data-act="editShift" data-v="${d}"><span class="pbar" style="background:#9AA6BC"></span><div class="tt"><div class="title">💼 Shift</div><div class="meta">${esc((s.start || '?') + '–' + (s.end || '?'))}</div></div></div>`; }
+function plansBlock(d, label = 'Plans') { const ps = dayPlans(d), sh = shiftRow(d); if (!ps.length && !sh) return ''; const all = ps.map(p => [p.allDay ? '' : p.time || '99', planRow(p)]); if (sh) all.push([S.shifts[d].start || '99', sh]); all.sort((a, b) => a[0].localeCompare(b[0])); return `<div class="sect">${label}</div><div class="plans">${all.map(x => x[1]).join('')}</div>`; }
+const IT_ACTS = ({
+  itKind: el => { IT.kind = el.dataset.v; itRefresh(true); },
+  itMore: () => { IT.more = !IT.more; itRefresh(true); },
+  itIgn: el => { IT.ign[el.dataset.v] = true; IT.parsed = parseSmart(IT.text, IT.ign); itRefresh(true); },
+  itDay: el => { IT.manual.date = el.dataset.v; itRefresh(true); },
+  itPickDate: () => { IT.more = true; itRefresh(true); const d = document.querySelector('[data-it=date]'); d && (d.showPicker ? d.showPicker() : d.focus()); },
+  itSet: el => { const k = el.dataset.k; let v = el.dataset.v; if (k === 'length') v = Number(itVals().length) === Number(v) ? '' : Number(v); IT.manual[k] = v; itRefresh(true); },
+  itSave: () => {
+    const v = itVals(), plan = IT.kind === 'plan';
+    const title = (IT.isNew ? IT.parsed.title : IT.text).trim();
+    if (!title) { toast(plan ? 'Name the plan' : 'Give the task a name'); return; }
+    const it = normTask({ ...v, title, kind: plan ? 'plan' : 'task', id: IT.id });
+    const prepToDay = !!it.prepToDay; delete it.prepToDay;
+    if (plan) { it.priority = false; it.length = ''; it.app = ''; it.cat = it.cat || 'social'; it.prep = it.prep || []; if (it.allDay) { it.time = ''; it.end = ''; } }
+    if (it.time && (!it.slot || it.slot === 'any' || plan)) { const hh = Number(it.time.slice(0, 2)); it.slot = hh < 12 ? 'am' : hh < 17 ? 'pm' : 'eve'; }
+    if (!it.date) it.date = today();
+    const i = S.tasks.findIndex(x => x.id === it.id);
+    if (i >= 0) S.tasks[i] = it; else S.tasks.push(it);
+    if (plan && prepToDay) { const pd0 = addDays(it.date, -1) < today() ? today() : addDays(it.date, -1); it.prep.filter(x => !x.done && !S.tasks.some(t => t.prepId === x.id && t.status !== 'dropped')).forEach(x => S.tasks.push(normTask({ title: x.text + ' — for ' + title, date: pd0, tag: 'P', prepFor: it.id, prepId: x.id }))); }
+    if (!plan && it.goalId && it.stepId) { const g = goalById(it.goalId), s = g && findStep(g, it.stepId); if (s && s.status === 'todo') s.status = 'doing'; }
+    save(); closeSheet(); render(); IT = null;
+    toast(i >= 0 ? 'Saved' : (plan ? 'Plan added to ' : 'Added to ') + (it.date === today() ? 'today' : fmt(it.date)));
+  },
+  itPrepAdd: () => { const el = $('#it_prep'), tx = el.value.trim(); if (!tx) return; const pr = (itVals().prep || []).slice(); pr.push({ id: uid(), text: tx, done: false }); IT.manual.prep = pr; itMoreHtml(); setTimeout(() => $('#it_prep') && $('#it_prep').focus(), 30); },
+  itPrepDel: el => { IT.manual.prep = (itVals().prep || []).filter(x => x.id !== el.dataset.id); itMoreHtml(); },
+  itPrepTog: el => { IT.manual.prep = (itVals().prep || []).map(x => x.id === el.dataset.id ? { ...x, done: !x.done } : x); itMoreHtml(); },
+  itDelete: () => { const t = S.tasks.find(x => x.id === IT.id); if (t) { if (t.recurringId) t.status = 'dropped'; else S.tasks = S.tasks.filter(x => x.id !== IT.id); save(); } closeSheet(); IT = null; render(); toast('Removed'); }
+});
+document.addEventListener('input', e => {
+  const el = e.target; if (!IT) return;
+  if (el.id === 'it_text') { IT.text = el.value; if (IT.isNew) IT.parsed = parseSmart(IT.text, IT.ign); itRefresh(false); return; }
+  if (el.dataset.it && el.type !== 'checkbox' && el.tagName !== 'SELECT') { IT.manual[el.dataset.it] = el.value; if (el.dataset.it === 'date' || el.dataset.it === 'time') itRefresh(false); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'it_prep') { e.preventDefault(); ACT.itPrepAdd(); } if (e.key === 'Enter' && e.target.id === 'it_text' && IT && IT.isNew) { e.preventDefault(); ACT.itSave(); } });
+document.addEventListener('change', e => {
+  const el = e.target; if (!IT || !el.dataset.it) return;
+  const k = el.dataset.it;
+  if (k === 'late') IT.manual.end = el.checked ? 'late' : '';
+  else if (el.type === 'checkbox') IT.manual[k] = el.checked;
+  else IT.manual[k] = el.value;
+  if (k === 'goalId') IT.manual.stepId = '';
+  if (k === 'date' || k === 'time') itRefresh(false);
+});
 
 /* ---------- actions ---------- */
 let toastTimer;
@@ -726,6 +887,7 @@ const ACT = {
   toggleTask: el => {
     const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return;
     t.status = t.status === 'done' ? 'open' : 'done'; t.doneAt = t.status === 'done' ? Date.now() : '';
+    if (t.prepFor) { const pl = S.tasks.find(x => x.id === t.prepFor), pi = pl && (pl.prep || []).find(x => x.id === t.prepId); if (pi) pi.done = t.status === 'done'; }
     save(); render();
     if (t.status === 'done' && t.goalId && t.stepId) {
       const g = goalById(t.goalId), s = g && findStep(g, t.stepId);
@@ -733,24 +895,6 @@ const ACT = {
     }
   },
   togglePri: el => { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) { t.priority = !t.priority; save(); render(); } },
-  tfChip: el => { const g = el.dataset.g; let v = el.dataset.v; if (g === 'length') v = Number(TF.length) === Number(v) ? '' : Number(v); TF[g] = v; TF['_' + g] = true;
-    document.querySelectorAll(`#tf_${g} .chip`).forEach(c => c.classList.toggle('on', String(c.dataset.v) === String(v))); },
-  tfSave: () => {
-    let title = $('#tf_title').value.trim();
-    if (TF._new) { const p = parseQuick(title); title = p.title; for (const k in p.set) if (!TF['_' + k] || k === 'priority' || k === 'time') TF[k] = p.set[k]; }
-    if (!title) { toast('Give the task a name'); return; }
-    TF.title = title; TF.date = $('#tf_date').value || today(); TF.time = $('#tf_time').value || TF.time || '';
-    if (!$('#tf_time').value && !TF._new) TF.time = '';
-    TF.priority = $('#tf_pri').checked || (TF._new && TF.priority);
-    TF.goalId = $('#tf_goal').value; TF.stepId = TF.goalId ? $('#tf_step').value : ''; TF.app = $('#tf_app').value; TF.note = $('#tf_note').value;
-    if (TF.time && TF.slot === 'any') { const hh = Number(TF.time.slice(0, 2)); TF.slot = hh < 12 ? 'am' : hh < 17 ? 'pm' : 'eve'; }
-    const clean = {}; for (const k in TF) if (!k.startsWith('_')) clean[k] = TF[k];
-    const i = S.tasks.findIndex(x => x.id === clean.id);
-    if (i >= 0) S.tasks[i] = clean; else S.tasks.push(clean);
-    if (clean.goalId && clean.stepId) { const g = goalById(clean.goalId), s = g && findStep(g, clean.stepId); if (s && s.status === 'todo') s.status = 'doing'; }
-    save(); closeSheet(); render(); toast(i >= 0 ? 'Saved' : 'Added to ' + (clean.date === today() ? 'today' : fmt(clean.date)));
-  },
-  tfDelete: () => { const t = S.tasks.find(x => x.id === TF.id); if (t) { if (t.recurringId) t.status = 'dropped'; else S.tasks = S.tasks.filter(x => x.id !== TF.id); save(); } closeSheet(); render(); toast('Removed'); },
   toggleHabit: el => { const d = el.dataset.v, id = el.dataset.id; S.habitLog[d] = S.habitLog[d] || {}; S.habitLog[d][id] = !S.habitLog[d][id]; save(); render(); },
   capture: () => {
     openSheet(`<h3>Quick capture</h3><textarea id="cap_text" rows="3" placeholder="Idea, task, opportunity or a question to research"></textarea><div class="chips" style="margin-top:10px" id="cap_type">${Object.entries(INBOX_T).map(([k, l], i) => `<button class="chip ${i === 1 ? 'on' : ''}" data-act="capType" data-v="${k}">${l}</button>`).join('')}</div><div class="row-btns"><button class="btn primary" data-act="capSave">Save to inbox</button></div>`);
@@ -870,6 +1014,7 @@ const ACT = {
   skipUpdate: el => { S.appliedUpdates.push(el.dataset.id); PENDING = PENDING.filter(p => p.id !== el.dataset.id); save(); PENDING.length ? ACT.reviewUpdates() : closeSheet(); render(); }
 };
 let CAP = 'idea';
+Object.assign(ACT, IT_ACTS);
 
 function achieve(g) { g.achieved = today(); save(); render(); toast('🏆 Goal achieved — added to Wins'); }
 function slippedSheet() {
@@ -1100,7 +1245,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   const el = e.target;
-  if (el.dataset.chg === 'tfGoal') { $('#tf_step').innerHTML = stepOptions(el.value, ''); $('#tf_steplab').style.display = el.value ? '' : 'none'; }
+  if (el.dataset.chg === 'itGoal') { $('#it_step').innerHTML = stepOptions(el.value, ''); $('#it_steplab').style.display = el.value ? '' : 'none'; }
 });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { S.lastOpen = today(); render(); checkUpdates(); } else save(); });
 window.addEventListener('pagehide', save);

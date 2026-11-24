@@ -192,3 +192,20 @@ a{color:var(--accent-ink)}
 .sheet-x{position:absolute;top:10px;right:12px;width:34px;height:34px;border-radius:50%;background:var(--card2);color:var(--muted);font-size:15px;z-index:2}
 .sheet h3{padding-right:44px}
 .back{font-size:16px;font-weight:600}
+
+.bigin{font-size:17px;padding:13px 14px;margin-top:4px}
+.parse{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:22px}
+.pchip{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:4px 6px 4px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,var(--card));color:var(--accent-ink)}
+.pchip.k{padding-right:10px}
+.pchip button{font-size:11px;opacity:.7;padding:0 4px}
+.more-btn{display:block;margin-top:14px;font-size:14px;color:var(--accent-ink)}
+.seg button.on{background:var(--card)}
+.plans{display:flex;flex-direction:column;gap:8px}
+.plan{display:flex;gap:12px;align-items:stretch;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
+.pbar{width:4px;border-radius:2px;flex:none}
+
+.sheet label>input,.sheet label>select,.sheet label>textarea{display:block;width:100%}
+.sheet .two label{min-width:0}
+.sheet input[type=date],.sheet input[type=time]{min-width:0;-webkit-appearance:none;appearance:none;min-height:42px}
+.sheet label.check>input{display:inline-block;width:auto;flex:none;margin:0}
+.sheet label.check{display:flex;gap:10px;align-items:center}
