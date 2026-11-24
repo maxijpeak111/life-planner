@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.5';
+const VERSION = '1.6';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -295,7 +295,7 @@ function backBtn(fallbackAct, fallbackLabel, extra = '') {
 
 function taskRow(t, opts = {}) {
   const g = t.goalId && goalById(t.goalId);
-  const meta = [t.time, fmtLen(t.length), opts.showDate ? fmt(t.date) : '', g ? '⛰ ' + g.title : '', t.note ? '✎ note' : ''].filter(Boolean).join(' · ');
+  const meta = [detailSummary(t), t.time, fmtLen(t.length), opts.showDate ? fmt(t.date) : '', g ? '⛰ ' + g.title : '', t.note ? '✎ note' : ''].filter(Boolean).join(' · ');
   const url = t.app && appUrl(t.app);
   return `<div class="task ${t.status === 'done' ? 'done' : ''}" data-act="editTask" data-id="${t.id}">
 <button class="chk" data-act="toggleTask" data-id="${t.id}" aria-label="Mark done"></button>
@@ -739,76 +739,164 @@ function parseSmart(text, ign) {
 let IT = null;
 const PLAN_KINDS = [['social', 'Social', '#E59A6A'], ['work', 'Work', '#9AA6BC'], ['family', 'Family', '#D98BA8'], ['sport', 'Sport / event', '#3FA79B'], ['appt', 'Appointment', '#7C93D6'], ['travel', 'Travel', '#D9A441']];
 const KIND = Object.fromEntries(PLAN_KINDS.map(k => [k[0], { name: k[1], color: k[2] }]));
+/* Add flow: 1) pick a category  2) a layout built for that category.
+   Extra per-category answers live in task.detail (new optional field — older tasks simply don't have it). */
+const CATS = {
+  T: { name: 'Training', title: 'Training session', sub: 'Build the session — muscles, cardio, sauna', nameLbl: 'Session name', ph: 'e.g. Back & biceps + swim', noteLbl: 'Session notes', notePh: 'e.g. drop set on the last back exercise' },
+  S: { name: 'Study', title: 'Study session', sub: 'PT course, Spanish, reading', nameLbl: 'What are you studying?', ph: 'e.g. Unit 4 — muscles of the shoulder', noteLbl: 'Note', notePh: '' },
+  B: { name: 'Business', title: 'Business task', sub: 'Videos, clients, admin', nameLbl: 'Task', ph: 'e.g. Film hamstring stretch video', noteLbl: 'Note', notePh: '' },
+  P: { name: 'Personal', title: 'Personal task', sub: 'Errands, home, life admin', nameLbl: 'Task', ph: 'e.g. Pick up parcel', noteLbl: 'Note', notePh: '' }
+};
+const DET = {
+  T: { types: ['Weights', 'Cardio', 'Class / sport', 'Mobility'],
+       parts: ['Chest', 'Back', 'Biceps', 'Triceps', 'Shoulders', 'Legs', 'Glutes', 'Core', 'Full body'],
+       cardio: ['Swim', 'Run', 'Bike', 'Row', 'Walk', 'Cross-trainer', 'Stairs'],
+       mob: ['Hips', 'Hamstrings', 'Back', 'Shoulders', 'Calves', 'Full body'],
+       recovery: ['Sauna', 'Steam room', 'Stretch', 'Foam roll', 'Ice bath'],
+       effort: ['Easy', 'Steady', 'Hard'] },
+  S: { subject: ['PT course', 'Spanish', 'Reading', 'Business learning', 'Other'],
+       methods: ['Read & notes', 'Videos', 'Flashcards', 'Practice questions', 'Mock exam', 'Assignment', 'Speaking'] },
+  B: { area: ['Filming', 'Editing', 'Posting', 'Planning content', 'Clients', 'Admin', 'Learning'] },
+  P: { area: ['Admin', 'Errand', 'Home', 'Social', 'Self-care', 'Money'] }
+};
+const DET_KEYS = { T: ['types', 'parts', 'cardio', 'mob', 'recovery', 'effort', 'sport'], S: ['subject', 'unit', 'methods', 'aim'], B: ['area', 'aim'], P: ['area'] };
+function detailSummary(t) {
+  const d = t.detail; if (!d || t.kind === 'plan') return '';
+  const o = [];
+  if (t.tag === 'T') {
+    Object.entries(d.parts || {}).forEach(([k, n]) => o.push(k + ' ×' + n));
+    if (d.sport) o.push(d.sport);
+    Object.entries(d.cardio || {}).forEach(([k, n]) => o.push(k + ' ' + fmtLen(n)));
+    if ((d.mob || []).length) o.push('Mobility: ' + d.mob.join(', '));
+    (d.recovery || []).forEach(x => o.push(x));
+    if (d.effort) o.push(d.effort);
+  } else if (t.tag === 'S') { [d.subject, d.unit, (d.methods || []).join(', ')].forEach(x => x && o.push(x)); }
+  else if (d.area) o.push(d.area);
+  return o.join(' · ');
+}
+function autoTrainTitle(d) {
+  d = d || {}; const a = Object.keys(d.parts || {}), b = Object.keys(d.cardio || {});
+  const j = x => x.length > 1 ? x.slice(0, -1).join(', ') + ' & ' + x[x.length - 1] : x[0] || '';
+  return [j(a), d.sport || '', j(b)].filter(Boolean).join(' + ') || (d.types || [])[0] || '';
+}
 function taskSheet(item, dflt = {}) {
   const isNew = !item;
   const base = item ? { ...item } : normTask({ date: V.tab === 'calendar' && V.cal.mode === 'day' ? V.cal.date : today(), ...dflt });
-  IT = { isNew, id: base.id, kind: base.kind === 'plan' ? 'plan' : (dflt.kind || 'task'), text: base.title || '', base, manual: {}, ign: {}, more: !isNew, parsed: { title: base.title || '', set: {} } };
-  if (!isNew) IT.manual = { ...base };
-  openSheet(`<h3>${isNew ? 'Add' : IT.kind === 'plan' ? 'Edit plan' : 'Edit task'}</h3>
-<div class="seg" id="it_kind"><button data-act="itKind" data-v="task">✓ Task</button><button data-act="itKind" data-v="plan">◆ Plan</button></div>
-<input id="it_text" class="bigin" autocomplete="off" value="${esc(IT.text)}">
+  const kind = item ? (item.kind === 'plan' ? 'plan' : 'task') : (dflt.kind === 'plan' ? 'plan' : null);
+  IT = { isNew, id: base.id, kind, cat: TAGS.includes(base.tag) ? base.tag : 'P', text: base.title || '', base, manual: {}, ign: { tag: true }, more: false, parsed: { title: base.title || '', set: {} } };
+  if (!isNew) IT.manual = { ...base, detail: JSON.parse(JSON.stringify(base.detail || {})) };
+  else if (IT.text) IT.parsed = parseSmart(IT.text, IT.ign);
+  openSheet('<div id="it_body"></div>');
+  itBody();
+}
+function itBody() {
+  const box = $('#it_body'); if (!box || !IT) return;
+  if (!IT.kind) {
+    const card = (v, name, sub, color) => `<button class="catcard${v === 'plan' ? ' wide' : ''}" data-act="itChoose" data-v="${v}"><span class="cdot" style="background:${color}"></span><b>${name}</b><span>${sub}</span></button>`;
+    box.innerHTML = `<h3>${IT.isNew ? 'What are you adding?' : 'Change type'}</h3>${IT.text ? `<div class="small muted" style="margin-top:2px">“${esc(IT.text)}”</div>` : ''}
+<div class="catgrid">${TAGS.map(k => card(k, CATS[k].name, CATS[k].sub, S.tagColors[k])).join('')}${card('plan', '◆ Plan / event', 'Something with a time — staff do, appointment, class, trip', 'var(--text)')}</div>`;
+    return;
+  }
+  const plan = IT.kind === 'plan', c = CATS[IT.cat];
+  const ttl = plan ? (IT.isNew ? 'New plan' : 'Edit plan') : (IT.isNew ? c.title : 'Edit ' + c.title.toLowerCase());
+  box.innerHTML = `<div class="it-head"><button class="back" data-act="itPick">‹ Type</button></div>
+<h3 style="margin-top:6px">${plan ? '◆ ' : `<span class="dot dot-${IT.cat}"></span> `}${ttl}</h3>
+<label>${plan ? 'Plan' : c.nameLbl}<input id="it_text" class="bigin" autocomplete="off" value="${esc(IT.text)}"></label>
 <div id="it_parse" class="parse"></div>
 <div class="lbl">Day</div><div class="chips scroll" id="it_days"></div>
+<div id="it_cat"></div>
 <button class="more-btn" data-act="itMore" id="it_morebtn"></button>
 <div id="it_more"></div>
-<div class="row-btns">${!isNew ? `<button class="btn danger" data-act="itDelete">Remove</button>` : ''}<button class="btn primary" data-act="itSave" id="it_save"></button></div>`);
+<div class="row-btns">${!IT.isNew ? `<button class="btn danger" data-act="itDelete">Remove</button>` : ''}<button class="btn primary" data-act="itSave" id="it_save"></button></div>`;
   itRefresh(true);
-  if (isNew) setTimeout(() => { const el = $('#it_text'); el && el.focus(); }, 60);
+  if (IT.isNew && !IT.text) setTimeout(() => { const el = $('#it_text'); el && el.focus(); }, 60);
 }
 function itVals() { const p = IT.isNew ? IT.parsed.set : {}; return { ...IT.base, ...p, ...IT.manual }; }
 function itRefresh(full) {
-  if (!IT) return;
+  if (!IT || !IT.kind || !$('#it_text')) return;
   const v = itVals(), plan = IT.kind === 'plan', t = today();
-  document.querySelectorAll('#it_kind button').forEach(b => b.classList.toggle('on', b.dataset.v === IT.kind));
-  $('#it_text').placeholder = plan ? 'e.g. Staff do thu 7pm-late' : 'e.g. S Spanish 20m am !';
+  $('#it_text').placeholder = plan ? 'e.g. Staff do thu 7pm-late' : CATS[IT.cat].ph;
   const chips = [];
   if (IT.isNew && IT.text.trim()) {
     const ps = IT.parsed.set, fromP = k => ps[k] !== undefined && IT.manual[k] === undefined;
-    chips.push(`<span class="pchip k">${plan ? '◆ Plan' : '✓ Task'}</span>`);
     if (fromP('date')) chips.push(`<span class="pchip">${v.date === t ? 'Today' : fmt(v.date)}<button data-act="itIgn" data-v="date">✕</button></span>`);
     if (fromP('time') || fromP('end')) chips.push(`<span class="pchip">${v.time || ''}${v.end ? '–' + v.end : ''}<button data-act="itIgn" data-v="time">✕</button></span>`);
     if (fromP('allDay')) chips.push(`<span class="pchip">All day<button data-act="itIgn" data-v="time">✕</button></span>`);
     if (fromP('length')) chips.push(`<span class="pchip">${fmtLen(v.length)}<button data-act="itIgn" data-v="length">✕</button></span>`);
     if (fromP('slot')) chips.push(`<span class="pchip">${SLOTN[v.slot]}<button data-act="itIgn" data-v="slot">✕</button></span>`);
     if (plan && fromP('cat')) chips.push(`<span class="pchip"><span class="dot" style="background:${KIND[v.cat].color}"></span> ${KIND[v.cat].name}<button data-act="itIgn" data-v="cat">✕</button></span>`);
-    if (fromP('tag')) chips.push(`<span class="pchip">${TAGN[v.tag]}<button data-act="itIgn" data-v="tag">✕</button></span>`);
     if (fromP('priority')) chips.push(`<span class="pchip">★ Priority<button data-act="itIgn" data-v="priority">✕</button></span>`);
   }
-  $('#it_parse').innerHTML = chips.length > 1 ? `<span class="small muted">Understood:</span> ${chips.join('')}` : (IT.isNew ? `<span class="small muted">${plan ? 'Type the plan with its day and time, like “gym class fri 6pm”.' : 'Shortcuts: start with T/S/B/P · 20m · am/pm/eve · ! for priority · a day like “thu”.'}</span>` : '');
+  $('#it_parse').innerHTML = chips.length ? `<span class="small muted">Understood:</span> ${chips.join('')}` : (IT.isNew ? `<span class="small muted">${plan ? 'Type it with its day and time, like “gym class fri 6pm”.' : IT.cat === 'T' ? 'Leave blank and it names itself from what you pick below.' : 'You can type a day, time or length too, like “thu 30m”.'}</span>` : '');
   let days = ''; for (let i = 0; i < 7; i++) { const d = addDays(t, i); days += `<button class="chip ${v.date === d ? 'on' : ''}" data-act="itDay" data-v="${d}">${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : fmt(d, { weekday: 'short', day: 'numeric' })}</button>`; }
   const other = v.date < t || v.date > addDays(t, 6);
   days += `<button class="chip ${other ? 'on' : ''}" data-act="itPickDate">${other ? fmt(v.date) : 'Pick date…'}</button>`;
   $('#it_days').innerHTML = days;
-  $('#it_morebtn').textContent = IT.more ? '− Fewer details' : (plan ? '＋ More details (end time, kind, prep list, goal)' : '＋ More details (type, time, length, goal, note)');
-  $('#it_save').textContent = IT.isNew ? (plan ? 'Add plan' : 'Add task') : 'Save';
-  if (full) itMoreHtml();
+  $('#it_morebtn').textContent = IT.more ? '− Fewer details' : (plan ? '＋ More (exact date, goal)' : '＋ More (exact date & time, goal, open an app)');
+  $('#it_save').textContent = IT.isNew ? (plan ? 'Add plan' : 'Add ' + CATS[IT.cat].name.toLowerCase()) : 'Save';
+  if (full) { itCatHtml(); itMoreHtml(); }
 }
-function itMoreHtml() {
-  const box = $('#it_more'); if (!IT.more) { box.innerHTML = ''; return; }
-  const v = itVals(), plan = IT.kind === 'plan';
-  let h = `<div class="two"><label>Date<input type="date" data-it="date" value="${v.date || ''}"></label><label>${plan ? 'Starts' : 'Rough time'}<input type="time" data-it="time" value="${v.time || ''}"></label></div>`;
+function dChips(key, opts, multi, cur) {
+  return `<div class="chips">${opts.map(o => { const on = multi ? (cur || []).includes(o) : cur === o; return `<button class="chip ${on ? 'on' : ''}" data-act="${multi ? 'itDet' : 'itDetOne'}" data-k="${key}" data-v="${esc(o)}">${esc(o)}</button>`; }).join('')}</div>`;
+}
+function dCounter(key, opts, cur, unit) {
+  cur = cur || {};
+  const chips = `<div class="chips">${opts.map(o => `<button class="chip ${cur[o] ? 'on' : ''}" data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="0">${esc(o)}${cur[o] ? (key === 'parts' ? ' ×' + cur[o] : ' ' + fmtLen(cur[o])) : ''}</button>`).join('')}</div>`;
+  const rows = Object.keys(cur).map(o => `<div class="stepr"><span>${esc(o)}</span><button data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="-1">−</button><b>${key === 'parts' ? cur[o] + ' ' + unit : fmtLen(cur[o])}</b><button data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="1">＋</button></div>`).join('');
+  return chips + (rows ? `<div class="steprs">${rows}</div>` : '');
+}
+function itCatHtml() {
+  const box = $('#it_cat'); if (!box) return;
+  const v = itVals(), plan = IT.kind === 'plan', d = v.detail || {};
+  let h = '';
   if (plan) {
-    h += `<div class="two"><label>Ends<input type="time" data-it="end" value="${v.end && v.end !== 'late' ? v.end : ''}"></label><label class="check" style="margin-top:30px"><input type="checkbox" data-it="late" ${v.end === 'late' ? 'checked' : ''}> Till late</label></div>
-<label class="check"><input type="checkbox" data-it="allDay" ${v.allDay ? 'checked' : ''}> All day</label>
+    h += `<div class="two"><label>Starts<input type="time" data-it="time" value="${v.time || ''}"></label><label>Ends<input type="time" data-it="end" value="${v.end && v.end !== 'late' ? v.end : ''}"></label></div>
+<div class="two"><label class="check"><input type="checkbox" data-it="late" ${v.end === 'late' ? 'checked' : ''}> Till late</label><label class="check"><input type="checkbox" data-it="allDay" ${v.allDay ? 'checked' : ''}> All day</label></div>
 <div class="lbl">Kind of plan</div><div class="chips">${PLAN_KINDS.map(([k, l, c]) => `<button class="chip ${(v.cat || 'social') === k ? 'on' : ''}" data-act="itSet" data-k="cat" data-v="${k}"><span class="dot" style="background:${c}"></span> ${l}</button>`).join('')}</div>
 <div class="lbl">Prep checklist</div><div class="list" style="margin-top:6px">${(v.prep || []).map(x => `<div class="task"><button class="chk ${x.done ? 'on' : ''}" data-act="itPrepTog" data-id="${x.id}" style="${x.done ? 'background:var(--accent);border-color:var(--accent)' : ''}"></button><div class="tt"><div class="title" style="${x.done ? 'text-decoration:line-through;color:var(--faint)' : ''}">${esc(x.text)}</div></div><button class="small muted" data-act="itPrepDel" data-id="${x.id}">✕</button></div>`).join('')}
 <div class="task"><input id="it_prep" placeholder="e.g. book taxi, buy gift" style="flex:1"><button class="btn sm" data-act="itPrepAdd">Add</button></div></div>
 ${(v.prep || []).some(x => !x.done) ? `<label class="check"><input type="checkbox" data-it="prepToDay" ${IT.manual.prepToDay ? 'checked' : ''}> Put unticked prep on the day before as tasks</label>` : ''}`;
+    box.innerHTML = h; return;
+  }
+  const c = IT.cat, O = DET[c];
+  if (c === 'T') {
+    const ty = d.types || [];
+    h += `<div class="lbl">What's in the session? <span class="faint">(pick all that apply)</span></div>${dChips('types', O.types, true, ty)}`;
+    if (ty.includes('Weights')) h += `<div class="sect-s">🏋️ Weights — muscles &amp; number of exercises</div>${dCounter('parts', O.parts, d.parts, 'exercises')}`;
+    if (ty.includes('Cardio')) h += `<div class="sect-s">🏊 Cardio — what &amp; how long</div>${dCounter('cardio', O.cardio, d.cardio)}`;
+    if (ty.includes('Class / sport')) h += `<div class="sect-s">🥊 Class / sport</div><label style="margin-top:4px"><input data-det="sport" value="${esc(d.sport || '')}" placeholder="e.g. Spin class, MMA, 5-a-side"></label>`;
+    if (ty.includes('Mobility')) h += `<div class="sect-s">🧘 Mobility — areas</div>${dChips('mob', O.mob, true, d.mob)}`;
+    h += `<div class="sect-s">♨️ After / extras</div>${dChips('recovery', O.recovery, true, d.recovery)}
+<div class="lbl">Effort</div>${dChips('effort', O.effort, false, d.effort)}`;
+  } else if (c === 'S') {
+    h += `<div class="lbl">Subject</div>${dChips('subject', O.subject, false, d.subject)}`;
+    if (d.subject === 'PT course') h += `<label>Unit / module<input data-det="unit" value="${esc(d.unit || '')}" placeholder="e.g. Level 3 · Unit 2"></label>`;
+    h += `<div class="lbl">How you'll study</div>${dChips('methods', O.methods, true, d.methods)}
+<label>Done when…<input data-det="aim" value="${esc(d.aim || '')}" placeholder="e.g. notes finished for 4.1–4.3"></label>`;
+  } else if (c === 'B') {
+    h += `<div class="lbl">Area</div>${dChips('area', O.area, false, d.area)}
+<label>Done when…<input data-det="aim" value="${esc(d.aim || '')}" placeholder="e.g. video exported and captioned"></label>`;
   } else {
-    h += `<div class="lbl">When in the day</div><div class="chips">${SLOTS.map(([k, l]) => `<button class="chip ${v.slot === k ? 'on' : ''}" data-act="itSet" data-k="slot" data-v="${k}">${l}</button>`).join('')}</div>
+    h += `<div class="lbl">Kind</div>${dChips('area', O.area, false, d.area)}`;
+  }
+  h += `<div class="lbl">When in the day</div><div class="chips">${SLOTS.map(([k, l]) => `<button class="chip ${v.slot === k ? 'on' : ''}" data-act="itSet" data-k="slot" data-v="${k}">${l}</button>`).join('')}</div>
 <div class="lbl">Length</div><div class="chips">${[15, 30, 45, 60, 90, 120].map(m => `<button class="chip ${Number(v.length) === m ? 'on' : ''}" data-act="itSet" data-k="length" data-v="${m}">${fmtLen(m)}</button>`).join('')}</div>
-<label class="check" style="margin-top:12px"><input type="checkbox" data-it="priority" ${v.priority ? 'checked' : ''}> ★ Priority</label>`;
-  }
-  if (!plan) h += `<div class="lbl">Type</div><div class="chips">${TAGS.map(k => `<button class="chip ${v.tag === k ? 'on' : ''}" data-act="itSet" data-k="tag" data-v="${k}"><span class="dot dot-${k}"></span> ${TAGN[k]}</button>`).join('')}</div>`;
-  {
-    const goals = activeGoals();
-    h += `<label>Linked goal<select data-it="goalId" data-chg="itGoal"><option value="">— none —</option>${goals.map(g => `<option value="${g.id}" ${v.goalId === g.id ? 'selected' : ''}>${esc(g.title)}</option>`).join('')}</select></label>
-<label id="it_steplab" style="${v.goalId ? '' : 'display:none'}">Goal step<select id="it_step" data-it="stepId">${stepOptions(v.goalId, v.stepId)}</select></label>
-${plan ? '' : `<label>Open an app<select data-it="app"><option value="">— none —</option>${S.apps.map(a => `<option ${v.app === a.name ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`}`;
-  }
-  if (!plan) h += `<label>Note<textarea data-it="note" rows="2">${esc(v.note || '')}</textarea></label>`;
+<label class="check" style="margin-top:12px"><input type="checkbox" data-it="priority" ${v.priority ? 'checked' : ''}> ★ Priority</label>
+<label>${CATS[c].noteLbl}<textarea data-it="note" rows="2" placeholder="${esc(CATS[c].notePh)}">${esc(v.note || '')}</textarea></label>`;
   box.innerHTML = h;
 }
+function itMoreHtml() {
+  const box = $('#it_more'); if (!box) return; if (!IT.more) { box.innerHTML = ''; return; }
+  const v = itVals(), plan = IT.kind === 'plan';
+  let h = `<div class="two"><label>Date<input type="date" data-it="date" value="${v.date || ''}"></label>${plan ? '<span></span>' : `<label>Rough time<input type="time" data-it="time" value="${v.time || ''}"></label>`}</div>`;
+  const goals = activeGoals();
+  h += `<label>Linked goal<select data-it="goalId" data-chg="itGoal"><option value="">— none —</option>${goals.map(g => `<option value="${g.id}" ${v.goalId === g.id ? 'selected' : ''}>${esc(g.title)}</option>`).join('')}</select></label>
+<label id="it_steplab" style="${v.goalId ? '' : 'display:none'}">Goal step<select id="it_step" data-it="stepId">${stepOptions(v.goalId, v.stepId)}</select></label>
+${plan ? '' : `<label>Open an app<select data-it="app"><option value="">— none —</option>${S.apps.map(a => `<option ${v.app === a.name ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`}`;
+  box.innerHTML = h;
+}
+function itDet() { return JSON.parse(JSON.stringify(itVals().detail || {})); }
+function itSuggestApp(name) { if (!itVals().app && S.apps.some(a => a.name === name)) IT.manual.app = name; }
 function planRow(p, opts = {}) {
   const tm = p.allDay ? 'All day' : (p.time ? p.time + (p.end ? '–' + p.end : '') : '');
   const pr = p.prep || [], g = p.goalId && goalById(p.goalId), k = KIND[p.cat || 'social'];
@@ -818,7 +906,13 @@ function planRow(p, opts = {}) {
 function shiftRow(d) { const s = S.shifts[d]; if (!s || s.off) return ''; return `<div class="plan" data-act="editShift" data-v="${d}"><span class="pbar" style="background:#9AA6BC"></span><div class="tt"><div class="title">💼 Shift</div><div class="meta">${esc((s.start || '?') + '–' + (s.end || '?'))}</div></div></div>`; }
 function plansBlock(d, label = 'Plans') { const ps = dayPlans(d), sh = shiftRow(d); if (!ps.length && !sh) return ''; const all = ps.map(p => [p.allDay ? '' : p.time || '99', planRow(p)]); if (sh) all.push([S.shifts[d].start || '99', sh]); all.sort((a, b) => a[0].localeCompare(b[0])); return `<div class="sect">${label}</div><div class="plans">${all.map(x => x[1]).join('')}</div>`; }
 const IT_ACTS = ({
-  itKind: el => { IT.kind = el.dataset.v; itRefresh(true); },
+  itPick: () => { const el = $('#it_text'); if (el) IT.text = el.value; IT.kind = null; itBody(); },
+  itChoose: el => { const v = el.dataset.v; IT.ign.cat = v !== 'plan'; if (v === 'plan') IT.kind = 'plan'; else { IT.kind = 'task'; IT.cat = v; IT.manual.tag = v; } if (IT.isNew) IT.parsed = parseSmart(IT.text, IT.ign); itBody(); },
+  itDet: el => { const d = itDet(), k = el.dataset.k, v = el.dataset.v, a = d[k] || []; d[k] = a.includes(v) ? a.filter(x => x !== v) : [...a, v]; IT.manual.detail = d; itCatHtml(); },
+  itDetOne: el => { const d = itDet(), k = el.dataset.k, v = el.dataset.v; d[k] = d[k] === v ? '' : v; IT.manual.detail = d; if (d[k] === 'Spanish') itSuggestApp('Spanish'); if (d[k] === 'Money') itSuggestApp('Bank of Maxi'); itCatHtml(); itMoreHtml(); },
+  itCnt: el => { const d = itDet(), k = el.dataset.k, v = el.dataset.v, dd = Number(el.dataset.d), o = d[k] || {}, step = k === 'parts' ? 1 : 5;
+    if (!dd) { if (o[v]) delete o[v]; else o[v] = k === 'parts' ? 2 : 20; } else { o[v] = (o[v] || 0) + dd * step; if (o[v] < step) delete o[v]; }
+    d[k] = o; IT.manual.detail = d; itCatHtml(); },
   itMore: () => { IT.more = !IT.more; itRefresh(true); },
   itIgn: el => { IT.ign[el.dataset.v] = true; IT.parsed = parseSmart(IT.text, IT.ign); itRefresh(true); },
   itDay: el => { IT.manual.date = el.dataset.v; itRefresh(true); },
@@ -826,9 +920,11 @@ const IT_ACTS = ({
   itSet: el => { const k = el.dataset.k; let v = el.dataset.v; if (k === 'length') v = Number(itVals().length) === Number(v) ? '' : Number(v); IT.manual[k] = v; itRefresh(true); },
   itSave: () => {
     const v = itVals(), plan = IT.kind === 'plan';
-    const title = (IT.isNew ? IT.parsed.title : IT.text).trim();
-    if (!title) { toast(plan ? 'Name the plan' : 'Give the task a name'); return; }
+    let title = (IT.isNew ? IT.parsed.title : IT.text).trim();
+    if (!title && !plan && IT.cat === 'T') title = autoTrainTitle(v.detail);
+    if (!title) { toast(plan ? 'Name the plan' : IT.cat === 'T' ? 'Name the session or pick what’s in it' : 'Give it a name'); return; }
     const it = normTask({ ...v, title, kind: plan ? 'plan' : 'task', id: IT.id });
+    if (!plan) { it.tag = IT.cat; const dt = {}; (DET_KEYS[IT.cat] || []).forEach(k => { const x = (v.detail || {})[k]; if (x && (typeof x !== 'object' || Object.keys(x).length)) dt[k] = x; }); if (Object.keys(dt).length || it.detail) it.detail = dt; }
     const prepToDay = !!it.prepToDay; delete it.prepToDay;
     if (plan) { it.priority = false; it.length = ''; it.app = ''; it.cat = it.cat || 'social'; it.prep = it.prep || []; if (it.allDay) { it.time = ''; it.end = ''; } }
     if (it.time && (!it.slot || it.slot === 'any' || plan)) { const hh = Number(it.time.slice(0, 2)); it.slot = hh < 12 ? 'am' : hh < 17 ? 'pm' : 'eve'; }
@@ -847,7 +943,8 @@ const IT_ACTS = ({
 });
 document.addEventListener('input', e => {
   const el = e.target; if (!IT) return;
-  if (el.id === 'it_text') { IT.text = el.value; if (IT.isNew) IT.parsed = parseSmart(IT.text, IT.ign); itRefresh(false); return; }
+  if (el.dataset.det) { const d = itDet(); d[el.dataset.det] = el.value; IT.manual.detail = d; return; }
+  if (el.id === 'it_text') { IT.text = el.value; if (IT.isNew) IT.parsed = parseSmart(IT.text, IT.ign); itRefresh(false); itCatHtml(); return; }
   if (el.dataset.it && el.type !== 'checkbox' && el.tagName !== 'SELECT') { IT.manual[el.dataset.it] = el.value; if (el.dataset.it === 'date' || el.dataset.it === 'time') itRefresh(false); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'it_prep') { e.preventDefault(); ACT.itPrepAdd(); } if (e.key === 'Enter' && e.target.id === 'it_text' && IT && IT.isNew) { e.preventDefault(); ACT.itSave(); } });

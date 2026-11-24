@@ -215,3 +215,20 @@ details.fold{margin-top:22px;border-top:1px solid var(--line);padding-top:10px}
 details.fold summary{font-size:13px;color:var(--muted);cursor:pointer;list-style:none}
 details.fold summary::before{content:'▸ '}
 details.fold[open] summary::before{content:'▾ '}
+
+/* add flow: category picker + category layouts */
+.catgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:14px}
+.catcard{min-width:0;white-space:normal;width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:14px 14px 16px;border-radius:16px;border:1px solid var(--line);background:var(--card);min-height:104px}
+.catcard.wide{grid-column:1/-1;min-height:0}
+.catcard b{font-size:17px;color:var(--text)}
+.catcard span:last-child{font-size:13px;color:var(--muted);line-height:1.3}
+.cdot{width:12px;height:12px;border-radius:50%;margin-bottom:4px}
+.catcard:active{transform:scale(.98)}
+.it-head{display:flex;align-items:center;min-height:34px;padding-right:44px}
+.sect-s{font-size:14px;font-weight:600;color:var(--text);margin:18px 0 6px}
+.faint{color:var(--faint)}
+.steprs{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.stepr{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 8px 6px 12px}
+.stepr span{flex:1;font-size:15px}
+.stepr b{min-width:92px;text-align:center;font-size:14px;font-weight:600}
+.stepr button{width:34px;height:34px;border-radius:50%;background:var(--card2);font-size:18px;color:var(--text)}
