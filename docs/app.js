@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.0';
+const VERSION = '2.1';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -482,6 +482,7 @@ ${g.why ? `<div class="sect">Why</div><div class="card para">${esc(g.why)}</div>
 ${g.research ? `<div class="sect">Research summary</div><div class="card para">${esc(g.research)}</div>` : ''}
 ${g.sources ? `<div class="sect">Sources</div><div class="card para small">${linkify(g.sources)}</div>` : ''}
 ${g.archived ? `<div class="sect">Archived ${g.archivedOn ? fmt(g.archivedOn) : ''}</div><div class="card para">${esc(g.archiveNote || 'No note')}</div>` : ''}`;
+  h += `<details class="grp editsteps"><summary>Edit phases &amp; steps</summary>`;
   g.phases.forEach(p => {
     const done = p.steps.filter(s => s.status === 'done').length;
     h += `<div class="phase"><div class="phase-h"><span class="grow">${esc(p.name)}</span><span class="small muted">${done}/${p.steps.length}</span><button class="btn sm" data-act="editPhase" data-g="${g.id}" data-p="${p.id}">Edit</button></div>
@@ -489,7 +490,7 @@ ${g.archived ? `<div class="sect">Archived ${g.archivedOn ? fmt(g.archivedOn) : 
 <button class="btn sm" style="margin-top:8px" data-act="addStep" data-g="${g.id}" data-p="${p.id}">＋ Step</button></div>`;
   });
   const linked = S.tasks.filter(t => t.goalId === g.id && t.status !== 'dropped').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
-  h += `<button class="btn full" style="margin-top:16px" data-act="addPhase" data-g="${g.id}">＋ Phase</button>
+  h += `<button class="btn full" style="margin-top:16px" data-act="addPhase" data-g="${g.id}">＋ Phase</button></details>
 ${linked.length ? `<div class="sect">Recent tasks for this goal</div><div class="list">${linked.map(t => taskRow(t, { showDate: true })).join('')}</div>` : ''}
 <div class="row-btns">${!g.achieved && !g.archived ? `<button class="btn" data-act="achieveGoal" data-id="${g.id}">🏆 Achieved</button><button class="btn" data-act="archiveGoal" data-id="${g.id}">Archive…</button>` : `<button class="btn" data-act="restoreGoal" data-id="${g.id}">Restore to active</button>`}</div></div>`;
   return h;
@@ -793,7 +794,7 @@ function goalPicker(d, gid) {
   }
   const g = goalById(gid); if (!g) return;
   const cp = curPhase(g);
-  openSheet(`<button class="back" data-act="fromGoals" data-v="${d}">‹ All goals</button><h3 style="margin-top:8px">${esc(g.title)}</h3><p class="small muted">Tap a step to add it to ${dl}.</p>${g.phases.map(p => { const open = p.steps.filter(s => s.status !== 'done'); if (!open.length) return ''; return `<details class="grp" ${p === cp ? 'open' : ''}><summary>${esc(p.name)}${p === cp ? ' <span class="muted">· now</span>' : ''} <span class="muted">(${open.length})</span></summary><div class="list">${open.map(s => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${d}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${(() => { const pt = S.tasks.find(t => t.stepId === s.id && t.status === 'open'); return pt ? '📅 Planned ' + fmt(pt.date) : s === nextUnplaced(g) ? '<b style="color:var(--accent-ink)">Next to place</b>' : STN[s.status]; })()}</div></div><span class="chev">＋</span></button>`).join('')}</div></details>`; }).join('')}`);
+  openSheet(`<button class="back" data-act="fromGoals" data-v="${d}">‹ All goals</button><h3 style="margin-top:8px">${esc(g.title)}</h3><p class="small muted">Tap a step to add it to ${dl}.</p>${g.phases.map(p => { const open = p.steps.filter(s => s.status !== 'done'); if (!open.length) return ''; return `<details class="grp" ${p === cp ? 'open' : ''}><summary>${esc(p.name)}${p === cp ? ' <span class="muted">· now</span>' : ''} <span class="muted">(${open.length})</span></summary><div class="list">${open.map(s => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${d}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${(() => { const pt = S.tasks.find(t => t.stepId === s.id && t.status === 'open'); return pt ? '📅 Planned ' + fmt(pt.date) : s === nextUnplaced(g) ? '<b style="color:var(--accent-ink)">Next to place</b>' : STN[s.status]; })()}${stepDur(s) ? ' · ' + esc(stepDur(s)) : ''}</div></div><span class="chev">＋</span></button>`).join('')}</div></details>`; }).join('')}`);
 }
 function stepConfirm(g, s, d) {
   const rel = relatedSteps(g, s);
@@ -874,15 +875,18 @@ function moveStepTask(t, nd) {
   st.slice(idx + 1).forEach(s => { const lt = S.tasks.find(x => x.stepId === s.id && x.status === 'open' && x.goalId === g.id); if (!lt) return; if (lt.date <= prev) { let nd2 = addDays(lt.date, delta); if (nd2 <= prev) nd2 = addDays(prev, 1); lt.date = nd2; n++; } prev = lt.date; });
   return n;
 }
+function stepDur(s) { return s.dur || (s.mins ? fmtLen(s.mins) : ''); }
 function storyHtml(g) {
-  const st = allSteps(g); if (!st.length) return '';
-  const row = s => { const t = stepTask(s.id); const when = s.status === 'done' ? (s.doneOn ? fmt(s.doneOn) : 'Done') : t && t.status === 'open' ? fmt(t.date) : ''; const cls = s.status === 'done' ? 'done' : t && t.status === 'open' ? (t.date < today() ? 'late' : 'plan') : 'todo';
-    return [cls, `<div class="sty sty-${cls}"><span class="sd"></span><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${cls === 'done' ? '✓ ' + when : cls === 'plan' ? '📅 ' + when : cls === 'late' ? '⚠ was ' + when : 'Not placed yet'}</div></div>${cls === 'todo' ? `<button class="btn sm" data-act="stepToDay" data-g="${g.id}" data-s="${s.id}">Place</button>` : ''}</div>`]; };
-  const rows = st.map(row); let shown = '', hidden = '', todo = 0;
-  rows.forEach(([c, h]) => { if (c === 'todo') { todo++; if (todo > 3) { hidden += h; return; } } shown += h; });
-  return `<div class="sect">The story</div><div class="story">${shown}${hidden ? `<details class="stymore"><summary>＋ ${todo - 3} more not placed yet</summary>${hidden}</details>` : ''}</div>`;
+  if (!allSteps(g).length) return '';
+  const cp = curPhase(g);
+  const row = s => { const t = stepTask(s.id); const when = s.status === 'done' ? (s.doneOn ? fmt(s.doneOn) : 'Done') : t && t.status === 'open' ? fmt(t.date) : ''; const cls = s.status === 'done' ? 'done' : t && t.status === 'open' ? (t.date < today() ? 'late' : 'plan') : 'todo'; const d = stepDur(s);
+    return `<div class="sty sty-${cls}"><span class="sd"></span><div class="tt" data-act="stepInfo" data-g="${g.id}" data-s="${s.id}"><div class="title">${esc(s.title)}${s.why ? ' <span class="infoi">ⓘ</span>' : ''}</div><div class="meta">${cls === 'done' ? '✓ ' + when : cls === 'plan' ? '📅 ' + when : cls === 'late' ? '⚠ was ' + when : 'Not placed'}${d ? ' · ' + esc(d) : ''}</div></div>${cls === 'todo' ? `<button class="btn sm" data-act="stepToDay" data-g="${g.id}" data-s="${s.id}">Place</button>` : ''}</div>`; };
+  return `<div class="sect">The story</div>${g.phases.map(p => { if (!p.steps.length) return ''; const done = p.steps.filter(x => x.status === 'done').length, all = done === p.steps.length;
+    return `<details class="story" ${p === cp ? 'open' : ''}><summary><span class="grow">${all ? '✓ ' : ''}${esc(p.name)}</span><span class="small muted">${done}/${p.steps.length}</span></summary>${p.steps.map(row).join('')}</details>`; }).join('')}`;
 }
 const DAYS_ACTS = {
+  stepInfo: el => { const g = goalById(el.dataset.g), st = g && findStep(g, el.dataset.s); if (!st) return; const t = stepTask(st.id), d = stepDur(st);
+    openSheet(`<h3>${esc(st.title)}</h3><div class="small muted">${esc(g.title)}${d ? ' · ' + esc(d) : ''} · ${STN[st.status]}${t && t.status === 'open' ? ' · 📅 ' + fmt(t.date) : ''}</div>${st.why ? `<div class="lbl">Why</div><div class="card para">${esc(st.why)}</div>` : ''}${st.source ? `<div class="lbl">Source</div><div class="card small">${linkify(st.source)}</div>` : ''}${st.note ? `<div class="lbl">Note</div><div class="card para">${esc(st.note)}</div>` : ''}<div class="row-btns">${st.status !== 'done' && !(t && t.status === 'open') ? `<button class="btn" data-act="stepToDay" data-g="${g.id}" data-s="${st.id}">Place on a day</button>` : ''}<button class="btn" data-act="editStep" data-g="${g.id}" data-s="${st.id}">Edit</button></div>`); },
   chainPlace: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s), d = el.dataset.v; if (!s) return; addTaskFromStep(g, s, d); chainOffer(g, s, d); },
   chainPick: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s); if (!s) return; pickDateSheet('Place “' + s.title + '” on…', d => { addTaskFromStep(g, s, d); chainOffer(g, s, d); }, addDays(el.dataset.v, 1)); },
   closeSheetRender: () => { closeSheet(); render(); },
@@ -1243,7 +1247,7 @@ function toast(msg, label, fn) {
 function setStepStatus(g, s, st) { s.status = st; s.doneOn = st === 'done' ? today() : (st === 'todo' ? '' : s.doneOn || ''); }
 function addTaskFromStep(g, s, date, extra = []) {
   const p = pillarById(g.pillars[0]);
-  S.tasks.push(normTask({ title: s.title, date, tag: p ? p.tag : 'P', goalId: g.id, stepId: s.id, ...(extra.length ? { extraSteps: extra } : {}) }));
+  S.tasks.push(normTask({ title: s.title, date, tag: p ? p.tag : 'P', goalId: g.id, stepId: s.id, ...(s.mins && s.mins <= 240 ? { length: s.mins } : {}), ...(extra.length ? { extraSteps: extra } : {}) }));
   if (s.status === 'todo') s.status = 'doing';
   extra.forEach(([gid, sid]) => { const og = goalById(gid), os = og && findStep(og, sid); if (os && os.status === 'todo') os.status = 'doing'; });
   save();
@@ -1468,8 +1472,9 @@ function mergeData(d) {
     if (!og) { ng.created = ng.created || today(); S.goals.push(ng); return; }
     const old = {}; allSteps(og).forEach(s => old[s.id] = s);
     allSteps(ng).forEach(s => { const o = old[s.id]; if (o) { s.status = o.status; s.doneOn = o.doneOn; s.note = o.note || s.note || ''; } });
-    const keepSteps = allSteps(og).filter(s => !allSteps(ng).some(x => x.id === s.id) && s.status !== 'todo');
-    if (keepSteps.length) ng.phases.push({ id: uid(), name: 'Kept from before', steps: keepSteps });
+    const keepSteps = allSteps(og).filter(s => !allSteps(ng).some(x => x.id === s.id) && (raw.replaceSteps ? s.status === 'done' : s.status !== 'todo'));
+    if (keepSteps.length) ng.phases.push({ id: uid(), name: raw.replaceSteps ? 'Done before' : 'Kept from before', steps: keepSteps });
+    delete ng.replaceSteps;
     Object.assign(og, ng, { archived: og.archived, achieved: og.achieved, archiveNote: og.archiveNote });
   });
   ['tasks', 'habits', 'inbox', 'wins', 'people', 'reading', 'admin', 'timeline', 'travel', 'templates', 'recurring'].forEach(k => {
