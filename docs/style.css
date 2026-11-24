@@ -268,3 +268,21 @@ details.fold[open] summary::before{content:'▾ '}
 .sheet p{white-space:normal;overflow-wrap:anywhere}
 .cnt .small{line-height:1.2}
 .mrow,.mrow .title{white-space:normal}
+/* v1.9: body rows, grouped pickers, habit sheet */
+.brow{align-items:center;cursor:default}
+.brow .tt{cursor:pointer}
+.brow .cnt{flex:none;gap:6px}
+.brow .cnt>button{width:32px;height:32px}
+details.grp{margin-top:10px}
+details.grp>summary{font-size:15px;font-weight:600;padding:8px 2px;cursor:pointer;list-style:none}
+details.grp>summary::before{content:'▸ ';color:var(--muted)}
+details.grp[open]>summary::before{content:'▾ '}
+details.grp .list{margin-top:4px}
+.hrow .hk{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none;font-size:14px;color:#fff}
+.hrow.on .hk{background:var(--accent);border-color:var(--accent)}
+.sheet label.check span{line-height:1.35}
+.sheet label.check{align-items:flex-start}
+.sheet label.check>span{white-space:normal;min-width:0;flex:1;overflow-wrap:anywhere}
+.sheet label.check>input{margin-top:3px}
+details.grp>summary{white-space:normal;overflow-wrap:anywhere;padding-right:4px}
+.sheet>.back{display:block;max-width:calc(100% - 48px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}

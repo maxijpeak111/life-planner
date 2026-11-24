@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.8';
+const VERSION = '1.9';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -341,8 +341,8 @@ function nudges() {
   if (S.vision.letter.text && S.vision.letter.unlock && S.vision.letter.unlock <= t && !S.vision.letter.opened) out.push({ html: '<b>Your letter to future you</b> has unlocked', act: 'moreLetter', go: 'Open' });
   return out.map(n => `<button class="nudge" data-act="${n.act}" data-v="${n.v || ''}"><span>${n.html}</span><span class="go">${n.go} ›</span></button>`).join('');
 }
-function comingUp() {
-  const t = today(), end = addDays(t, 14), items = [];
+function comingUp(from = today()) {
+  const t = from, end = addDays(today(), 14), items = [];
   S.goals.forEach(g => { if (!g.archived && !g.achieved && g.deadline && g.deadline >= t && g.deadline <= end) items.push([g.deadline, '⛰ ' + g.title]); });
   S.timeline.forEach(e => { if (e.date && e.date >= t && e.date <= end) items.push([e.date, e.title]); });
   const nowHM = z(new Date().getHours()) + ':' + z(new Date().getMinutes());
@@ -360,7 +360,7 @@ function renderToday() {
   const best = hs.reduce((m, h) => Math.max(m, streak(h.id)), 0);
   let ns = null, ng = null;
   for (const g of activeGoals().filter(g => g.horizon === 'short').concat(activeGoals().filter(g => g.horizon !== 'short'))) { const s = nextStep(g); if (s) { ns = s; ng = g; break; } }
-  const cu = comingUp(); const tomorrowShift = shiftText(addDays(t, 1));
+  const cu = comingUp(addDays(t, 1)); const tomorrowShift = shiftText(addDays(t, 1));
   const yChange = S.journal[addDays(t, -1)] && S.journal[addDays(t, -1)].change;
   const sh = shiftText(t);
   return `<header class="hero ${ph}">${scene(ph)}<div class="hero-top"><div><div class="hello">${greet()}, ${esc(S.name)}</div>
@@ -375,15 +375,15 @@ ${coachToday(t)}
 ${plansBlock(t, 'Plans today')}
 <div class="sect"><span class="grow">Priorities</span><button data-act="fromGoals" data-v="${t}">＋ From goals</button></div>
 ${pri.length ? `<div class="list">${pri.map(x => taskRow(x)).join('')}</div>` : `<div class="list"><div class="empty">Star ★ a task to pin it here.</div></div>`}
+<div class="sect"><span class="grow">Rest of today</span><button data-act="applyTemplate" data-v="${t}">Use template</button></div>
+${slotList(rest, 'Nothing else planned. Tap + to add, or use a template.')}
+${bodyRows(t)}
 <div class="tiles">
-<button class="tile" data-act="moreGo" data-v="habits"><div class="k">Habits</div><div class="v">${hdone}/${hs.length}</div>${best ? `<div class="streak">🔥 ${best} day streak</div>` : ''}</button>
+<button class="tile" data-act="habitSheet" data-v="${t}"><div class="k">Habits · tap to tick</div><div class="v">${hdone}/${hs.length}</div>${best ? `<div class="streak">🔥 ${best} day streak</div>` : ''}</button>
 <button class="tile" data-act="calDay" data-v="${t}"><div class="k">Today's plan</div><div class="v">${st.pct}%</div><div class="bar"><i style="width:${st.pct}%"></i></div></button>
 <button class="tile" ${ng ? `data-act="openGoal" data-id="${ng.id}"` : 'data-act="tab" data-v="goals"'}><div class="k">Next goal step</div><div class="s">${ns ? esc(ns.title) : 'Add a goal to see your next step'}</div></button>
 <button class="tile" data-act="tab" data-v="calendar"><div class="k">Coming up</div><div class="s">${cu.length ? esc(fmt(cu[0][0], { weekday: 'short', day: 'numeric' }) + ' · ' + cu[0][1]) : tomorrowShift ? 'Tomorrow · ' + esc(tomorrowShift) : 'Nothing in the next 2 weeks'}</div></button>
 </div>
-${hs.length ? `<div class="sect">Habits</div><div class="habits">${hs.map(h => `<button class="hchip ${habitDone(h.id, t) ? 'on' : ''}" data-act="toggleHabit" data-id="${h.id}" data-v="${t}">${habitDone(h.id, t) ? '✓' : '○'} ${esc(h.name)}${streak(h.id) ? ` <span class="n">${streak(h.id)}</span>` : ''}</button>`).join('')}</div>` : ''}
-<div class="sect"><span class="grow">Rest of today</span><button data-act="applyTemplate" data-v="${t}">Use template</button></div>
-${slotList(rest, 'Nothing else planned. Tap + to add, or use a template.')}
 <button class="btn full" style="margin-top:18px" data-act="eveningReview">🌙 Evening review</button>
 </div>`;
 }
@@ -707,7 +707,7 @@ function dayStrip(d) {
 function coachToday(t) {
   const h = new Date().getHours();
   const card = h < 16 ? `<button class="nudge coachn" data-act="morningPlan"><span>☀️ <b>Morning plan</b> — set the day up</span><span class="go">Open ›</span></button>` : `<button class="nudge coachn" data-act="eveningReview"><span>🌙 <b>Evening review</b> — close the day</span><span class="go">Open ›</span></button>`;
-  return card + dayStrip(t) + `<div class="tiles">${fuelCard(t)}${smokeCard(t)}</div>`;
+  return card + dayStrip(t);
 }
 /* next step from each active goal */
 function upNext(limit = 6) { const out = []; activeGoals().forEach(g => { const s = nextStep(g); if (s) out.push([g, s]); }); return out.slice(0, limit); }
@@ -739,7 +739,7 @@ const COACH_ACTS = {
 <div class="hint">${ty ? esc(DTN[ty][2]) : 'Pick one — it sets how much goes on today.'}</div>
 ${fuelSet() ? `<div class="lbl">Fuel</div><div class="card small">${esc(fl.txt)} <button class="small" style="color:var(--accent-ink)" data-act="fuelTip" data-v="${t}">· 💡 tip</button></div>` : ''}
 <div class="lbl">On today (${open.length} open)</div><div class="list" style="margin-top:6px">${open.length ? open.slice(0, 8).map(x => `<div class="task"><span class="tag tag-${x.tag}">${x.tag}</span><div class="tt"><div class="title">${x.priority ? '★ ' : ''}${esc(x.title)}</div></div></div>`).join('') : '<div class="empty">Nothing yet — add a step below or use a template.</div>'}</div>
-<div class="lbl">Up next from your goals</div><div class="list" style="margin-top:6px">${nx.length ? nx.map(([g, s]) => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${t}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${g.pillars.map(p => pillarById(p)?.icon || '').join('')} ${esc(g.title)}</div></div><span class="chev">＋ Today</span></button>`).join('') : '<div class="empty">No open goal steps.</div>'}</div>
+<div class="lbl">Up next from your goals</div><div class="list" style="margin-top:6px">${nx.length ? nx.slice(0, 3).map(([g, s]) => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${t}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${g.pillars.map(p => pillarById(p)?.icon || '').join('')} ${esc(g.title)}</div></div><span class="chev">＋ Today</span></button>`).join('') + `<button class="mrow" data-act="fromGoals" data-v="${t}"><div class="tt"><div class="title">Browse all goals</div><div class="meta">Pick a goal, then its steps</div></div><span class="chev">›</span></button>` : '<div class="empty">No open goal steps.</div>'}</div>
 ${S.smoke.quit && S.smoke.quit > t ? `<div class="lbl">Taper</div><div class="card small">Today's cap: <b>${smokeCap(t) ?? '— counting baseline'}</b></div>` : ''}
 <div class="row-btns"><button class="btn" data-act="trainWeek">🗓 Plan training week</button><button class="btn primary" data-act="closeSheet">Let's go</button></div>`);
   },
@@ -766,6 +766,48 @@ ${!s.quit ? '' : t < s.quit ? `<div class="lbl">Taper count today</div><div clas
     openSheet(`<h3>🗓 Training week · w/c ${fmt(ws, { day: 'numeric', month: 'short' })}</h3><div class="seg" style="margin-top:6px"><button class="${ws === weekStart(t) ? 'on' : ''}" data-act="trainWeek" data-v="${weekStart(t)}">This week</button><button class="${ws !== weekStart(t) ? 'on' : ''}" data-act="trainWeek" data-v="${addDays(weekStart(t), 7)}">Next week</button></div><p class="small muted">Suggested from your day types: work days get the shorter sessions, days off the fuller ones. Change any of them.</p>${rows}<div class="row-btns"><button class="btn primary" data-act="trainWeekSave">Add to calendar</button></div>`);
   },
   trainWeekSave: () => { let n = 0; document.querySelectorAll('[data-tw]').forEach(s => { if (!s.value) return; const tp = S.templates.find(x => x.id === s.value); if (tp) n += applyTpl(tp, s.dataset.tw); }); save(); closeSheet(); render(); toast(n + ' sessions added'); }
+};
+
+/* compact fuel + smoke rows, same size as a plan row */
+function bodyRows(d) {
+  const rows = [];
+  if (fuelSet()) { const { k, f } = fuelLine(d); rows.push(`<div class="plan brow"><span class="pbar" style="background:#7BB07A"></span><div class="tt" data-act="fuelType" data-v="${d}"><div class="title">🥗 ${FUELN[k]} · ${f.kcal.toLocaleString('en-GB')} kcal</div><div class="meta">P ${f.p}g · C ${f.c}g · F ${f.f}g · tap to change</div></div><button class="btn sm" data-act="fuelTip" data-v="${d}">💡 Tip</button></div>`); }
+  const sm = S.smoke;
+  if (sm.quit) {
+    if (d >= sm.quit) { const n = smokeFreeDays(d); rows.push(`<div class="plan brow"><span class="pbar" style="background:#3FA79B"></span><div class="tt" data-act="smokeSettings"><div class="title">🚭 Smoke-free · ${n} day${n === 1 ? '' : 's'}</div><div class="meta">Keep the streak</div></div><button class="btn sm" data-act="smokeSlip" data-v="${d}">Slip</button></div>`); }
+    else { const n = Number(sm.log[d] || 0), cap = smokeCap(d), left = Math.max(0, Math.round((pd(sm.quit) - pd(d)) / 864e5)); rows.push(`<div class="plan brow"><span class="pbar" style="background:${cap != null && n > cap ? '#D9734E' : '#9AA6BC'}"></span><div class="tt" data-act="smokeSettings"><div class="title">🚭 Taper · ${n}${cap != null ? ' / ' + cap : ''}</div><div class="meta">${cap == null ? 'Baseline week — count every one' : n > cap ? 'Over today\'s cap' : 'Today\'s cap'} · ${left} days to zero</div></div><div class="cnt"><button data-act="smokeAdd" data-v="${d}" data-n="-1" aria-label="One less">−</button><button data-act="smokeAdd" data-v="${d}" data-n="1" aria-label="One more">＋</button></div></div>`); }
+  } else rows.push(`<div class="plan brow"><span class="pbar" style="background:#9AA6BC"></span><div class="tt" data-act="smokeSettings"><div class="title">🚭 Smoke-free tracker</div><div class="meta">Not set up — tap to set a date</div></div></div>`);
+  return `<div class="sect">Body</div><div class="plans">${rows.join('')}</div>`;
+}
+/* goal picker: goals first, then that goal's steps */
+const STOPW = new Set(['first', 'week', 'with', 'from', 'into', 'your', 'what', 'this', 'that', 'full', 'list', 'days', 'time', 'once', 'each', 'have', 'than', 'then', 'them', 'more', 'less', 'over', 'nonstop', 'continuous', 'laps', 'month', 'start', 'make', 'done', 'step', 'steps', 'plan']);
+function sigWords(t) { return new Set(((t || '').toLowerCase().match(/[a-z0-9£]{4,}/g) || []).filter(w => !STOPW.has(w))); }
+function relatedSteps(g, s) {
+  const w = sigWords(s.title), out = [];
+  activeGoals().forEach(o => { if (o.id === g.id) return; allSteps(o).forEach(x => { if (x.status === 'done') return; const ex = (s.links || []).includes(x.id) || (x.links || []).includes(s.id); let n = 0; sigWords(x.title).forEach(v => { if (w.has(v)) n++; }); if (ex || n >= 1) out.push([o, x, ex ? 99 : n]); }); });
+  return out.sort((a, b) => b[2] - a[2]).slice(0, 5);
+}
+function goalPicker(d, gid) {
+  const dl = d === today() ? 'today' : fmt(d);
+  if (!gid) {
+    const gs = activeGoals().map(g => [g, allSteps(g).filter(s => s.status !== 'done').length]).filter(x => x[1]);
+    openSheet(`<h3>Add a goal step to ${dl}</h3><p class="small muted">Pick a goal, then its step.</p>${gs.length ? `<div class="list">${gs.map(([g, n]) => { const ns = nextStep(g); return `<button class="mrow" data-act="gpGoal" data-g="${g.id}" data-v="${d}"><div class="tt"><div class="title">${g.pillars.map(p => pillarById(p)?.icon || '').join('')} ${esc(g.title)}</div><div class="meta">${n} open${ns ? ' · next: ' + esc(ns.title) : ''}</div></div><span class="chev">›</span></button>`; }).join('')}</div>` : '<div class="card empty">No open goal steps yet. Add goals in the Goals tab.</div>'}`);
+    return;
+  }
+  const g = goalById(gid); if (!g) return;
+  const cp = curPhase(g);
+  openSheet(`<button class="back" data-act="fromGoals" data-v="${d}">‹ All goals</button><h3 style="margin-top:8px">${esc(g.title)}</h3><p class="small muted">Tap a step to add it to ${dl}.</p>${g.phases.map(p => { const open = p.steps.filter(s => s.status !== 'done'); if (!open.length) return ''; return `<details class="grp" ${p === cp ? 'open' : ''}><summary>${esc(p.name)}${p === cp ? ' <span class="muted">· now</span>' : ''} <span class="muted">(${open.length})</span></summary><div class="list">${open.map(s => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${d}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${STN[s.status]}${S.tasks.some(t => t.stepId === s.id && t.status === 'open') ? ' · already on a day' : ''}</div></div><span class="chev">＋</span></button>`).join('')}</div></details>`; }).join('')}`);
+}
+function stepConfirm(g, s, d) {
+  const rel = relatedSteps(g, s);
+  if (!rel.length) { addTaskFromStep(g, s, d); closeSheet(); render(); toast('Added to ' + (d === today() ? 'today' : fmt(d))); return; }
+  openSheet(`<button class="back" data-act="gpGoal" data-g="${g.id}" data-v="${d}">‹ ${esc(g.title)}</button><h3 style="margin-top:8px">${esc(s.title)}</h3><div class="lbl">Also counts toward (optional)</div><p class="small muted">Tick any step this also moves forward — finishing the task ticks them all.</p>${rel.map(([o, x]) => `<label class="check"><input type="checkbox" data-also="${o.id}|${x.id}"> <span>${esc(x.title)}<br><span class="small muted">${esc(o.title)}</span></span></label>`).join('')}<div class="row-btns"><button class="btn primary" data-act="stepAdd" data-g="${g.id}" data-s="${s.id}" data-v="${d}">Add to ${d === today() ? 'today' : fmt(d)}</button></div>`);
+}
+const PICK_ACTS = {
+  gpGoal: el => goalPicker(el.dataset.v || today(), el.dataset.g),
+  stepAdd: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s); if (!s) return; const extra = [...document.querySelectorAll('[data-also]')].filter(c => c.checked).map(c => c.dataset.also.split('|')); addTaskFromStep(g, s, el.dataset.v, extra); closeSheet(); render(); toast(extra.length ? `Added — counts for ${extra.length + 1} goals` : 'Added'); },
+  habitSheet: el => { const d = (el && el.dataset && el.dataset.v) || today(), hs = activeHabits();
+    openSheet(`<h3 id="hb_sheet">Habits · ${d === today() ? 'today' : fmt(d)}</h3>${hs.length ? `<div class="list">${hs.map(h => { const on = habitDone(h.id, d), n = streak(h.id); return `<button class="mrow hrow ${on ? 'on' : ''}" data-act="toggleHabit" data-id="${h.id}" data-v="${d}"><span class="hk">${on ? '✓' : ''}</span><div class="tt"><div class="title">${esc(h.name)}</div>${n ? `<div class="meta">🔥 ${n} day streak</div>` : ''}</div></button>`; }).join('')}</div>` : '<div class="card empty">No habits yet.</div>'}<div class="row-btns"><button class="btn" data-act="moreGo" data-v="habits">Manage habits</button><button class="btn primary" data-act="closeSheet">Done</button></div>`); }
 };
 
 /* ---------- sheets & forms ---------- */
@@ -1119,10 +1161,11 @@ function toast(msg, label, fn) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), label ? 5000 : 2200);
 }
 function setStepStatus(g, s, st) { s.status = st; s.doneOn = st === 'done' ? today() : (st === 'todo' ? '' : s.doneOn || ''); }
-function addTaskFromStep(g, s, date) {
+function addTaskFromStep(g, s, date, extra = []) {
   const p = pillarById(g.pillars[0]);
-  S.tasks.push(normTask({ title: s.title, date, tag: p ? p.tag : 'P', goalId: g.id, stepId: s.id }));
+  S.tasks.push(normTask({ title: s.title, date, tag: p ? p.tag : 'P', goalId: g.id, stepId: s.id, ...(extra.length ? { extraSteps: extra } : {}) }));
   if (s.status === 'todo') s.status = 'doing';
+  extra.forEach(([gid, sid]) => { const og = goalById(gid), os = og && findStep(og, sid); if (os && os.status === 'todo') os.status = 'doing'; });
   save();
 }
 function pickDateSheet(title, onPick, init = today()) {
@@ -1144,11 +1187,12 @@ const ACT = {
     save(); render();
     if (t.status === 'done' && t.goalId && t.stepId) {
       const g = goalById(t.goalId), s = g && findStep(g, t.stepId);
-      if (s && s.status !== 'done') { if (s.status === 'todo') { s.status = 'doing'; save(); } toast('Goal step in progress', 'Mark step done', () => { setStepStatus(g, s, 'done'); save(); render(); }); }
+      const all = [[g, s], ...(t.extraSteps || []).map(([gi, si]) => { const og = goalById(gi); return [og, og && findStep(og, si)]; })].filter(x => x[1] && x[1].status !== 'done');
+      if (all.length) { all.forEach(([, st]) => { if (st.status === 'todo') st.status = 'doing'; }); save(); toast(all.length > 1 ? `${all.length} goal steps in progress` : 'Goal step in progress', all.length > 1 ? 'Mark all done' : 'Mark step done', () => { all.forEach(([gg, st]) => setStepStatus(gg, st, 'done')); save(); render(); }); }
     }
   },
   togglePri: el => { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) { t.priority = !t.priority; save(); render(); } },
-  toggleHabit: el => { const d = el.dataset.v, id = el.dataset.id; S.habitLog[d] = S.habitLog[d] || {}; S.habitLog[d][id] = !S.habitLog[d][id]; save(); render(); },
+  toggleHabit: el => { const d = el.dataset.v, id = el.dataset.id; S.habitLog[d] = S.habitLog[d] || {}; S.habitLog[d][id] = !S.habitLog[d][id]; save(); render(); if ($('#hb_sheet')) ACT.habitSheet({ dataset: { v: d } }); },
   capture: () => {
     openSheet(`<h3>Quick capture</h3><textarea id="cap_text" rows="3" placeholder="Idea, task, opportunity or a question to research"></textarea><div class="chips" style="margin-top:10px" id="cap_type">${Object.entries(INBOX_T).map(([k, l], i) => `<button class="chip ${i === 1 ? 'on' : ''}" data-act="capType" data-v="${k}">${l}</button>`).join('')}</div><div class="row-btns"><button class="btn primary" data-act="capSave">Save to inbox</button></div>`);
     CAP = 'idea'; setTimeout(() => $('#cap_text') && $('#cap_text').focus(), 60);
@@ -1181,13 +1225,10 @@ const ACT = {
   openJournalDay: el => { if (V.tab === 'journal' && V.journal.mode === 'daily') { V.journal.date = el.dataset.v || today(); render(); window.scrollTo(0, 0); return; } nav(() => { V.journal.mode = 'daily'; V.journal.date = el.dataset.v || today(); V.tab = 'journal'; }); },
   openWeekly: el => nav(() => { V.journal.mode = 'weekly'; V.journal.week = el.dataset.v || weekStart(today()); V.tab = 'journal'; }),
   openMonthly: el => nav(() => { V.journal.mode = 'monthly'; V.journal.month = el.dataset.v || monthKey(today()); V.tab = 'journal'; }),
-  fromGoals: el => {
-    const d = el.dataset.v || today(); const rows = [];
-    activeGoals().forEach(g => allSteps(g).filter(s => s.status !== 'done').slice(0, 3).forEach(s => rows.push([g, s])));
-    openSheet(`<h3>Add a goal step to ${d === today() ? 'today' : fmt(d)}</h3>${rows.length ? `<div class="list">${rows.map(([g, s]) => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${d}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${g.pillars.map(p => pillarById(p)?.icon || '').join('')} ${esc(g.title)} · ${STN[s.status]}</div></div><span class="chev">＋</span></button>`).join('')}</div>` : '<div class="card empty">No open goal steps yet. Add goals in the Goals tab.</div>'}`);
-  },
-  fgPick: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s); if (!s) return; addTaskFromStep(g, s, el.dataset.v); closeSheet(); render(); toast('Added'); },
-  applyTemplate: el => { const d = el.dataset.v; openSheet(`<h3>Use a template for ${d === today() ? 'today' : fmt(d)}</h3><div class="list">${S.templates.map(t => `<button class="mrow" data-act="tplApply" data-id="${t.id}" data-v="${d}"><div class="tt"><div class="title">${esc(t.name)}</div><div class="meta">${t.items.map(i => i.title).join(' · ')}</div></div></button>`).join('')}</div><p class="small muted">Tasks already on that day are kept. You can edit templates in More → Templates.</p>`); },
+  fromGoals: el => goalPicker(el.dataset.v || today()),
+  fgPick: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s); if (!s) return; stepConfirm(g, s, el.dataset.v); },
+  applyTemplate: el => { const d = el.dataset.v, groups = {}; S.templates.forEach(t => { const m = t.name.match(/^(.+?) · (.+)$/), g = m ? m[1] : 'Day templates'; (groups[g] = groups[g] || []).push([t, m ? m[2] : t.name]); });
+    openSheet(`<h3>Use a template for ${d === today() ? 'today' : fmt(d)}</h3>${Object.entries(groups).map(([g, ts]) => `<details class="grp" ${Object.keys(groups).length < 2 ? 'open' : ''}><summary>${esc(g)} <span class="muted">(${ts.length})</span></summary><div class="list">${ts.map(([t, nm]) => `<button class="mrow" data-act="tplApply" data-id="${t.id}" data-v="${d}"><div class="tt"><div class="title">${esc(nm)}</div><div class="meta">${t.items.map(i => i.title).join(' · ')}</div></div></button>`).join('')}</div></details>`).join('')}<p class="small muted">Tasks already on that day are kept. You can edit templates in More → Templates.</p>`); },
   tplApply: el => { const t = S.templates.find(x => x.id === el.dataset.id), d = el.dataset.v; if (!t) return; const n = applyTpl(t, d); save(); closeSheet(); render(); toast(n + ' tasks added'); },
   editShift: el => { const d = el.dataset.v, s = S.shifts[d] || {}; formSheet({ title: 'Shift · ' + fmt(d), values: { start: s.start || '', end: s.end || '', off: !!s.off }, fields: [{ k: 'start', label: 'Start', type: 'time' }, { k: 'end', label: 'Finish', type: 'time' }, { k: 'off', label: 'Day off', type: 'check' }], onSave: v => { if (!v.start && !v.end && !v.off) delete S.shifts[d]; else S.shifts[d] = v; }, onDelete: s.start || s.off ? () => { delete S.shifts[d]; } : null, deleteLabel: 'Clear' }); },
   shiftWeek: el => { const ws = el.dataset.v || weekStart(today()); let rows = '';
@@ -1240,7 +1281,7 @@ const ACT = {
   reviewDone: el => { const st = el.dataset.v === 'w' ? S.weekly : S.monthly, k = el.dataset.key; st[k] = st[k] || {}; st[k].done = !st[k].done; save(); render(); if (st[k].done) toast('Review complete'); },
 
   /* more */
-  moreGo: el => { if (!el.dataset.v) { V.more = null; HIST.length = 0; go('more'); return; } nav(() => { V.more = el.dataset.v; V.tab = 'more'; }); },
+  moreGo: el => { if ($('#sheet-root').classList.contains('open')) closeSheet(); if (!el.dataset.v) { V.more = null; HIST.length = 0; go('more'); return; } nav(() => { V.more = el.dataset.v; V.tab = 'more'; }); },
   moreLetter: () => { S.vision.letter.opened = true; save(); nav(() => { V.more = 'vision'; V.tab = 'more'; }); },
   collAdd: el => collForm(el.dataset.v, null),
   collEdit: el => collForm(el.dataset.v, S[el.dataset.v].find(x => x.id === el.dataset.id)),
@@ -1275,7 +1316,7 @@ const ACT = {
   skipUpdate: el => { S.appliedUpdates.push(el.dataset.id); PENDING = PENDING.filter(p => p.id !== el.dataset.id); save(); PENDING.length ? ACT.reviewUpdates() : closeSheet(); render(); }
 };
 let CAP = 'idea';
-Object.assign(ACT, IT_ACTS, COACH_ACTS);
+Object.assign(ACT, IT_ACTS, COACH_ACTS, PICK_ACTS);
 
 function achieve(g) { g.achieved = today(); save(); render(); toast('🏆 Goal achieved — added to Wins'); }
 function slippedSheet() {
