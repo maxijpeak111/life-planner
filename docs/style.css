@@ -209,3 +209,9 @@ a{color:var(--accent-ink)}
 .sheet input[type=date],.sheet input[type=time]{min-width:0;-webkit-appearance:none;appearance:none;min-height:42px}
 .sheet label.check>input{display:inline-block;width:auto;flex:none;margin:0}
 .sheet label.check{display:flex;gap:10px;align-items:center}
+
+.banner{font-size:14px;margin:8px 2px 0;padding:8px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,var(--card));color:var(--accent-ink)}
+details.fold{margin-top:22px;border-top:1px solid var(--line);padding-top:10px}
+details.fold summary{font-size:13px;color:var(--muted);cursor:pointer;list-style:none}
+details.fold summary::before{content:'▸ '}
+details.fold[open] summary::before{content:'▾ '}

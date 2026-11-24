@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.3';
+const VERSION = '1.5';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -66,7 +66,7 @@ function defaults() {
     habits: [{ id: 'h-am', name: 'AM stretch', active: true }, { id: 'h-pm', name: 'PM stretch', active: true }],
     habitLog: {}, journal: {}, weekly: {}, monthly: {},
     inbox: [], wins: [], people: [], reading: [], admin: [], timeline: [], travel: [],
-    vision: { identity: '', philosophy: '', quotes: [], idealDay: '', letter: { text: '', unlock: '' } },
+    vision: { identity: '', philosophy: '', quotes: [], idealDay: '', banner: '', letter: { text: '', unlock: '' } },
     templates: [
       { id: 'tpl-work', name: 'Work day', items: [
         { title: 'Wake, hydrate, breakfast', tag: 'P', slot: 'am', length: 20 },
@@ -364,6 +364,7 @@ function renderToday() {
 <button class="icon-btn" data-act="capture" aria-label="Quick capture">✎</button></div></header>
 <div class="wrap">
 <p class="line">${esc(dailyLine())}</p>
+${S.vision.banner ? `<p class="banner">${esc(S.vision.banner)}</p>` : ''}
 ${yChange ? `<p class="line-sub">Yesterday you said: <i>${esc(yChange)}</i></p>` : ''}
 ${nudges()}
 ${plansBlock(t, 'Plans today')}
@@ -599,11 +600,12 @@ function inboxPage() {
 function visionPage() {
   const v = S.vision, L = v.letter, t = today(), locked = L.text && L.unlock && L.unlock > t;
   let h = moreTop('🏔️ Vision & why');
-  h += vField('identity', 'Identity & vision — who you are becoming', 6) + vField('philosophy', 'Philosophy — how you live and decide', 6) + vField('idealDay', 'Your ideal day — once financial freedom is reached', 6);
+  h += vField('idealDay', 'Your ideal day', 6) + vField('philosophy', 'Philosophy — how you live and decide', 4);
   h += `<div class="sect"><span class="grow">Words to live by</span><button data-act="quoteAdd">＋ Add</button></div><div class="small muted">These rotate on Today with the built-in lines.</div>${v.quotes.map((q, i) => `<div class="quote"><span>${esc(q)}</span><button class="small muted" data-act="quoteDel" data-v="${i}">✕</button></div>`).join('')}`;
   h += `<div class="sect">Letter to future you</div><div class="card">${locked ? `<div class="locked">🔒 Sealed until ${fmt(L.unlock, { day: 'numeric', month: 'long', year: 'numeric' })}</div>` : L.text ? `<div class="para" style="font-family:var(--serif)">${esc(L.text)}</div><div class="small muted" style="margin-top:8px">${L.unlock ? 'Unlocked ' + fmt(L.unlock) : 'Not sealed'}</div>` : '<div class="muted">Write a letter now and seal it until a date you choose.</div>'}
 <div class="row-btns"><button class="btn sm" data-act="letterEdit">${L.text ? (locked ? 'Rewrite (replaces it)' : 'Write a new one') : 'Write letter'}</button></div></div>`;
   h += `<div class="list" style="margin-top:16px"><button class="mrow" data-act="moreGo" data-v="timeline"><span class="ic">🧭</span><span class="nm">Life timeline</span><span class="ct">${S.timeline.length || ''}</span><span class="chev">›</span></button><button class="mrow" data-act="moreGo" data-v="travel"><span class="ic">✈️</span><span class="nm">Travel bucket list</span><span class="ct">${S.travel.length || ''}</span><span class="chev">›</span></button></div>`;
+  h += `<details class="fold"><summary>Who I'm becoming</summary>${vField('identity', '', 12)}</details>`;
   return h + '</div>';
 }
 function vField(k, label, rows) { return `<label style="display:block;margin-top:14px"><span class="small muted">${label}</span><textarea rows="${rows}" data-vis="${k}" style="margin-top:5px;font-family:var(--serif)">${esc(S.vision[k])}</textarea></label>`; }
@@ -624,6 +626,7 @@ function settingsPage() {
   const snap = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
   let h = moreTop('⚙️ Settings & backup');
   h += `<div class="sect">Your name</div><input data-set="name" value="${esc(S.name)}">`;
+  h += `<div class="sect">Today banner (a fixed reminder under the daily line)</div><textarea rows="2" data-vis="banner">${esc(S.vision.banner || '')}</textarea>`;
   h += `<div class="sect">Look</div><div class="seg">${[['auto', 'Follow the time'], ['light', 'Always light'], ['dark', 'Always dark']].map(([k, l]) => `<button class="${S.theme === k ? 'on' : ''}" data-act="setTheme" data-v="${k}">${l}</button>`).join('')}</div>`;
   h += `<div class="sect">Tag colours</div><div class="card">${TAGS.map(k => `<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span class="tag tag-${k}" style="width:28px;text-align:center">${k}</span><span style="flex:1">${TAGN[k]}</span><input type="color" data-color="${k}" value="${S.tagColors[k]}"></div>`).join('')}<button class="btn sm" data-act="resetColors">Reset colours</button></div>`;
   h += `<div class="sect">Keep your data safe</div><div class="card"><div class="small">Everything is saved on this phone only, and app updates never touch it. If the phone is lost or replaced, only a backup file can bring it back.</div>
@@ -631,7 +634,7 @@ function settingsPage() {
 <div class="row-btns"><button class="btn primary" data-act="exportBackup">Export backup</button><button class="btn" data-act="importBackup">Restore from file</button></div>
 ${snap ? `<button class="btn sm" style="margin-top:10px" data-act="restoreSnap">Undo today: go back to the start-of-day copy (${fmt(snap.date)})</button>` : ''}</div>`;
   h += `<div class="sect">Bring data across</div><div class="card"><div class="small">Copy goal areas, shifts, events, quotes, principles and journal entries from your PT app, so you don't have to type them again.</div><div class="row-btns"><button class="btn primary" data-act="ptImport">Import from PT app</button></div>${S.lastPtImport ? `<div class="small muted" style="margin-top:6px">Last import ${fmt(S.lastPtImport)}</div>` : ''}</div>`;
-  h += `<div class="sect">Add things from Claude</div><div class="card"><div class="small">Claude can send goals, steps and plans. They show up on Today as "updates from Claude". You can also paste them here.</div><div class="row-btns"><button class="btn" data-act="pasteImport">Paste from Claude</button><button class="btn" data-act="checkUpdatesNow">Check for updates</button></div></div>`;
+  h += `<div class="sect">Add things from Claude</div><div class="card"><div class="small">Claude can send goals, steps and plans. They show up on Today as "updates from Claude". You can also paste them here.</div><div class="row-btns"><button class="btn primary" data-act="claudeFile">Open a file from Claude</button><button class="btn" data-act="pasteImport">Paste from Claude</button><button class="btn" data-act="checkUpdatesNow">Check for updates</button></div></div>`;
   h += `<div class="sect">Pillars</div><button class="btn full" data-act="managePillars">Manage pillars</button>`;
   return h + '</div>';
 }
@@ -1006,11 +1009,18 @@ const ACT = {
   exportBackup: () => exportBackup(),
   importBackup: () => $('#importFile').click(),
   restoreSnap: () => { const snap = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null'); if (!snap) return; if (!confirm('Go back to how the planner was at the start of ' + fmt(snap.date) + '? Changes since then will be lost.')) return; S = migrate(JSON.parse(snap.data)); localStorage.setItem(KEY, JSON.stringify(S)); render(); toast('Restored'); },
+  claudeFile: () => { let f = document.getElementById('claude_file'); if (!f) { f = document.createElement('input'); f.type = 'file'; f.id = 'claude_file'; f.accept = '.json,application/json,text/plain'; f.hidden = true; document.body.appendChild(f);
+      f.addEventListener('change', () => { const file = f.files[0]; if (!file) return; const rd = new FileReader(); rd.onload = () => { f.value = ''; try { const j = JSON.parse(rd.result); if (j.tasks && j.pillars && !j.updates) { toast('That is a backup — use Restore from file'); return; } const ups = (j.updates || [{ id: 'file-' + uid(), title: 'File from Claude', data: j.data || j }]).filter(u => u.id && !S.appliedUpdates.includes(u.id)); if (!ups.length) { toast('Already added — nothing new in that file'); return; } PENDING = PENDING.concat(ups.filter(u => !PENDING.some(p => p.id === u.id))); ACT.reviewUpdates(); } catch (e) { toast("That file isn't from Claude"); } }; rd.readAsText(file); }); }
+    f.click(); },
   pasteImport: () => openSheet(`<h3>Paste from Claude</h3><textarea id="paste_box" rows="8" placeholder="Paste the block Claude gave you"></textarea><div class="row-btns"><button class="btn primary" data-act="pasteGo">Add to planner</button></div>`),
   pasteGo: () => { try { const j = JSON.parse($('#paste_box').value); const ups = j.updates ? j.updates : [j.data ? j : { id: 'paste-' + uid(), title: 'Pasted', data: j }]; ups.forEach(u => { mergeData(u.data || {}); if (u.id && !S.appliedUpdates.includes(u.id)) S.appliedUpdates.push(u.id); }); PENDING = PENDING.filter(p => !S.appliedUpdates.includes(p.id)); save(); closeSheet(); render(); toast('Added'); } catch (e) { toast("That didn't look right. Copy the whole block from Claude."); } },
   checkUpdatesNow: async () => { await checkUpdates(); toast(PENDING.length ? PENDING.length + ' update(s) ready on Today' : 'No new updates'); },
-  reviewUpdates: () => { openSheet(`<h3>Updates from Claude</h3>${PENDING.map(u => `<div class="card"><b>${esc(u.title || 'Update')}</b><div class="small muted" style="margin-top:4px">${esc(u.description || '')}</div><div class="row-btns"><button class="btn sm" data-act="skipUpdate" data-id="${esc(u.id)}">Skip</button><button class="btn sm primary" data-act="applyUpdate" data-id="${esc(u.id)}">Add to planner</button></div></div>`).join('')}`); },
-  applyUpdate: el => { const u = PENDING.find(p => p.id === el.dataset.id); if (!u) return; mergeData(u.data || {}); S.appliedUpdates.push(u.id); PENDING = PENDING.filter(p => p !== u); save(); PENDING.length ? ACT.reviewUpdates() : closeSheet(); render(); toast('Added: ' + (u.title || 'update')); },
+  reviewUpdates: () => { openSheet(`<h3>Updates from Claude</h3>${PENDING.map(u => `<div class="card"><b>${u.enc ? '🔒 ' : ''}${esc(u.title || 'Update')}</b><div class="small muted" style="margin-top:4px">${esc(u.description || '')}</div>${u.enc ? `<input id="pc_${esc(u.id)}" type="password" autocomplete="off" placeholder="Passcode from Claude" style="margin-top:10px">` : ''}<div class="row-btns"><button class="btn sm" data-act="skipUpdate" data-id="${esc(u.id)}">Skip</button><button class="btn sm primary" data-act="applyUpdate" data-id="${esc(u.id)}">Add to planner</button></div></div>`).join('')}`); },
+  applyUpdate: async el => { const u = PENDING.find(p => p.id === el.dataset.id); if (!u) return;
+    let data = u.data || {};
+    if (u.enc) { const pc = (document.getElementById('pc_' + u.id) || {}).value || ''; if (!pc) { toast('Type the passcode first'); return; }
+      try { data = await unlock(u.enc, pc.trim()); } catch (e) { toast("That passcode didn't work"); return; } }
+    mergeData(data); S.appliedUpdates.push(u.id); PENDING = PENDING.filter(p => p !== u); save(); PENDING.length ? ACT.reviewUpdates() : closeSheet(); render(); toast('Added: ' + (u.title || 'update')); },
   skipUpdate: el => { S.appliedUpdates.push(el.dataset.id); PENDING = PENDING.filter(p => p.id !== el.dataset.id); save(); PENDING.length ? ACT.reviewUpdates() : closeSheet(); render(); }
 };
 let CAP = 'idea';
@@ -1091,7 +1101,7 @@ function mergeData(d) {
     Object.assign(og, ng, { archived: og.archived, achieved: og.achieved, archiveNote: og.archiveNote });
   });
   ['tasks', 'habits', 'inbox', 'wins', 'people', 'reading', 'admin', 'timeline', 'travel', 'templates', 'recurring'].forEach(k => {
-    (d[k] || []).forEach(it => { it = { ...it }; it.id = it.id || uid(); if (S[k].some(x => x.id === it.id)) return;
+    (d[k] || []).forEach(it => { it = { ...it }; it.id = it.id || uid(); const ix = S[k].findIndex(x => x.id === it.id); if (ix >= 0) { if (it.replace) { delete it.replace; S[k][ix] = it; } return; } delete it.replace;
       if (k === 'tasks') it = normTask(it); if (k === 'recurring') { it.start = it.start || today(); it.days = (it.days || [0, 1, 2, 3, 4, 5, 6]).map(Number); } S[k].push(it); });
   });
   if (d.shifts) for (const k in d.shifts) S.shifts[k] = d.shifts[k];
@@ -1207,6 +1217,15 @@ document.addEventListener('change', e => {
   if (el.dataset.pti) PTI.pick[el.dataset.pti] = el.checked;
   if (el.dataset.pta) PTI.areaSet[el.dataset.pta][el.dataset.f] = el.value;
 });
+
+/* locked updates: AES-GCM, key from passcode via PBKDF2-SHA256 */
+async function unlock(enc, pass) {
+  const b = x => Uint8Array.from(atob(x), c => c.charCodeAt(0));
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b(enc.salt), iterations: enc.iter || 250000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const out = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b(enc.iv) }, key, b(enc.data));
+  return JSON.parse(new TextDecoder().decode(out));
+}
 
 /* ---------- backup ---------- */
 async function exportBackup() {
