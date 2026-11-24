@@ -232,3 +232,19 @@ details.fold[open] summary::before{content:'▾ '}
 .stepr span{flex:1;font-size:15px}
 .stepr b{min-width:92px;text-align:center;font-size:14px;font-weight:600}
 .stepr button{width:34px;height:34px;border-radius:50%;background:var(--card2);font-size:18px;color:var(--text)}
+
+/* clearable time inputs + weekly shifts */
+.tin{position:relative;display:block;margin-top:5px}
+.tin input{display:block;width:100%;padding-right:40px}
+.tclr{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;background:var(--card2);color:var(--muted);font-size:13px}
+.tclr[hidden]{display:none}
+.swrow{margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.swday{display:flex;align-items:center;gap:12px}
+.swday b{flex:1;font-size:15px}
+.sheet .swday label.check{margin:0;font-size:14px}
+.swclr{font-size:13px;color:var(--accent-ink);padding:4px 2px}
+.swrow .two{margin-top:2px}
+.cunit{display:inline-flex;background:var(--card2);border-radius:9px;padding:2px;gap:2px}
+.cunit button{font-size:12px;padding:4px 8px;border-radius:7px;color:var(--muted)}
+.cunit button.on{background:var(--card);color:var(--text);font-weight:600}
+.stepr small{display:block;font-size:11px;color:var(--muted);font-weight:400}

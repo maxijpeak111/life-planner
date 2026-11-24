@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.6';
+const VERSION = '1.7';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -98,7 +98,7 @@ function defaults() {
       { name: 'Spanish', url: 'https://maxijpeak111.github.io/spanish-app/' },
       { name: 'Bank of Maxi', url: 'https://maxijpeak111.github.io/Bank-of-Maxi/' }
     ],
-    appliedUpdates: [], lastBackup: '', lastOpen: t
+    appliedUpdates: [], lastBackup: '', lastOpen: t, poolLen: 18
   };
 }
 function migrate(d) {
@@ -640,6 +640,8 @@ ${snap ? `<button class="btn sm" style="margin-top:10px" data-act="restoreSnap">
 }
 
 /* ---------- sheets & forms ---------- */
+/* time input with a clear button (iPhone's time picker has no way to empty a time once set) */
+function timeIn(attrs, val) { return `<span class="tin"><input type="time" ${attrs} value="${esc(val || '')}"><button type="button" class="tclr" data-act="clrTime" aria-label="Clear time" ${val ? '' : 'hidden'}>✕</button></span>`; }
 let FORM = null;
 function openSheet(html) { const r = $('#sheet-root'); r.innerHTML = `<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog"><div class="grab"></div><button class="sheet-x" data-act="closeSheet" aria-label="Close">✕</button>${html}</div>`; r.classList.add('open'); }
 function closeSheet() { const r = $('#sheet-root'); r.classList.remove('open'); r.innerHTML = ''; FORM = null; }
@@ -650,6 +652,7 @@ function fieldHtml(f) {
     case 'select': return `<label>${f.label}<select id="${id}">${f.options.map(o => `<option value="${esc(o.v)}" ${String(o.v) === String(v) ? 'selected' : ''}>${esc(o.l)}</option>`).join('')}</select></label>`;
     case 'multi': { const arr = Array.isArray(v) ? v : []; return `<div class="lbl">${f.label}</div><div class="chips">${f.options.map(o => `<button type="button" class="chip ${arr.includes(o.v) ? 'on' : ''}" data-act="multiChip" data-k="${f.k}" data-v="${esc(o.v)}">${esc(o.l)}</button>`).join('') || '<span class="small muted">None yet</span>'}</div>`; }
     case 'check': return `<label class="check"><input type="checkbox" id="${id}" ${v ? 'checked' : ''}> ${f.label}</label>`;
+    case 'time': return `<label>${f.label}${timeIn(`id="${id}"`, v)}</label>`;
     default: return `<label>${f.label}<input id="${id}" type="${f.type || 'text'}" value="${esc(v)}" placeholder="${esc(f.ph || '')}"></label>`;
   }
 }
@@ -759,14 +762,23 @@ const DET = {
   B: { area: ['Filming', 'Editing', 'Posting', 'Planning content', 'Clients', 'Admin', 'Learning'] },
   P: { area: ['Admin', 'Errand', 'Home', 'Social', 'Self-care', 'Money'] }
 };
-const DET_KEYS = { T: ['types', 'parts', 'cardio', 'mob', 'recovery', 'effort', 'sport'], S: ['subject', 'unit', 'methods', 'aim'], B: ['area', 'aim'], P: ['area'] };
+const DET_KEYS = { T: ['types', 'parts', 'cardio', 'cunit', 'mob', 'recovery', 'effort', 'sport'], S: ['subject', 'unit', 'methods', 'aim'], B: ['area', 'aim'], P: ['area'] };
+/* cardio units: swim in laps (pool length in S.poolLen, 18m), run/bike/row/walk in km, or minutes */
+const CUNITS = { Swim: ['laps', 'min'], Run: ['km', 'min'], Bike: ['km', 'min'], Row: ['km', 'min'], Walk: ['km', 'min'] };
+const UNIT = { laps: { step: 2, dflt: 20 }, km: { step: 0.5, dflt: 5 }, min: { step: 5, dflt: 20 } };
+function cUnit(d, k) { const u = (d.cunit || {})[k]; return u || (d.cunit ? 'min' : 'min'); }
+function cText(k, n, u) {
+  if (u === 'laps') return n + ' laps · ' + (n * (S.poolLen || 18)) + 'm';
+  if (u === 'km') return n + ' km';
+  return fmtLen(n);
+}
 function detailSummary(t) {
   const d = t.detail; if (!d || t.kind === 'plan') return '';
   const o = [];
   if (t.tag === 'T') {
     Object.entries(d.parts || {}).forEach(([k, n]) => o.push(k + ' ×' + n));
     if (d.sport) o.push(d.sport);
-    Object.entries(d.cardio || {}).forEach(([k, n]) => o.push(k + ' ' + fmtLen(n)));
+    Object.entries(d.cardio || {}).forEach(([k, n]) => o.push(k + ' ' + cText(k, n, cUnit(d, k))));
     if ((d.mob || []).length) o.push('Mobility: ' + d.mob.join(', '));
     (d.recovery || []).forEach(x => o.push(x));
     if (d.effort) o.push(d.effort);
@@ -839,10 +851,16 @@ function itRefresh(full) {
 function dChips(key, opts, multi, cur) {
   return `<div class="chips">${opts.map(o => { const on = multi ? (cur || []).includes(o) : cur === o; return `<button class="chip ${on ? 'on' : ''}" data-act="${multi ? 'itDet' : 'itDetOne'}" data-k="${key}" data-v="${esc(o)}">${esc(o)}</button>`; }).join('')}</div>`;
 }
-function dCounter(key, opts, cur, unit) {
-  cur = cur || {};
-  const chips = `<div class="chips">${opts.map(o => `<button class="chip ${cur[o] ? 'on' : ''}" data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="0">${esc(o)}${cur[o] ? (key === 'parts' ? ' ×' + cur[o] : ' ' + fmtLen(cur[o])) : ''}</button>`).join('')}</div>`;
-  const rows = Object.keys(cur).map(o => `<div class="stepr"><span>${esc(o)}</span><button data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="-1">−</button><b>${key === 'parts' ? cur[o] + ' ' + unit : fmtLen(cur[o])}</b><button data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="1">＋</button></div>`).join('');
+function dCounter(key, opts, d, unit) {
+  const cur = d[key] || {}, cardio = key === 'cardio';
+  const val = o => cardio ? cText(o, cur[o], cUnit(d, o)) : cur[o] + ' ' + unit;
+  const chips = `<div class="chips">${opts.map(o => `<button class="chip ${cur[o] ? 'on' : ''}" data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="0">${esc(o)}${cur[o] ? (cardio ? ' ' + esc(cText(o, cur[o], cUnit(d, o)).split(' · ')[0]) : ' ×' + cur[o]) : ''}</button>`).join('')}</div>`;
+  const rows = Object.keys(cur).map(o => {
+    const us = cardio ? (CUNITS[o] || ['min']) : null;
+    const seg = us && us.length > 1 ? `<span class="cunit">${us.map(u => `<button class="${cUnit(d, o) === u ? 'on' : ''}" data-act="itUnit" data-v="${esc(o)}" data-u="${u}">${u}</button>`).join('')}</span>` : '';
+    const [main, sub] = val(o).split(' · ');
+    return `<div class="stepr"><span>${esc(o)}${seg ? '<br>' + seg : ''}</span><button data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="-1">−</button><b>${esc(main)}${sub ? `<small>${esc(sub)}</small>` : ''}</b><button data-act="itCnt" data-k="${key}" data-v="${esc(o)}" data-d="1">＋</button></div>`;
+  }).join('');
   return chips + (rows ? `<div class="steprs">${rows}</div>` : '');
 }
 function itCatHtml() {
@@ -850,7 +868,7 @@ function itCatHtml() {
   const v = itVals(), plan = IT.kind === 'plan', d = v.detail || {};
   let h = '';
   if (plan) {
-    h += `<div class="two"><label>Starts<input type="time" data-it="time" value="${v.time || ''}"></label><label>Ends<input type="time" data-it="end" value="${v.end && v.end !== 'late' ? v.end : ''}"></label></div>
+    h += `<div class="two"><label>Starts${timeIn('data-it="time"', v.time)}</label><label>Ends${timeIn('data-it="end"', v.end && v.end !== 'late' ? v.end : '')}</label></div>
 <div class="two"><label class="check"><input type="checkbox" data-it="late" ${v.end === 'late' ? 'checked' : ''}> Till late</label><label class="check"><input type="checkbox" data-it="allDay" ${v.allDay ? 'checked' : ''}> All day</label></div>
 <div class="lbl">Kind of plan</div><div class="chips">${PLAN_KINDS.map(([k, l, c]) => `<button class="chip ${(v.cat || 'social') === k ? 'on' : ''}" data-act="itSet" data-k="cat" data-v="${k}"><span class="dot" style="background:${c}"></span> ${l}</button>`).join('')}</div>
 <div class="lbl">Prep checklist</div><div class="list" style="margin-top:6px">${(v.prep || []).map(x => `<div class="task"><button class="chk ${x.done ? 'on' : ''}" data-act="itPrepTog" data-id="${x.id}" style="${x.done ? 'background:var(--accent);border-color:var(--accent)' : ''}"></button><div class="tt"><div class="title" style="${x.done ? 'text-decoration:line-through;color:var(--faint)' : ''}">${esc(x.text)}</div></div><button class="small muted" data-act="itPrepDel" data-id="${x.id}">✕</button></div>`).join('')}
@@ -862,8 +880,8 @@ ${(v.prep || []).some(x => !x.done) ? `<label class="check"><input type="checkbo
   if (c === 'T') {
     const ty = d.types || [];
     h += `<div class="lbl">What's in the session? <span class="faint">(pick all that apply)</span></div>${dChips('types', O.types, true, ty)}`;
-    if (ty.includes('Weights')) h += `<div class="sect-s">🏋️ Weights — muscles &amp; number of exercises</div>${dCounter('parts', O.parts, d.parts, 'exercises')}`;
-    if (ty.includes('Cardio')) h += `<div class="sect-s">🏊 Cardio — what &amp; how long</div>${dCounter('cardio', O.cardio, d.cardio)}`;
+    if (ty.includes('Weights')) h += `<div class="sect-s">🏋️ Weights — muscles &amp; number of exercises</div>${dCounter('parts', O.parts, d, 'exercises')}`;
+    if (ty.includes('Cardio')) h += `<div class="sect-s">🏊 Cardio — what &amp; how long</div>${dCounter('cardio', O.cardio, d)}${(d.cardio || {}).Swim && cUnit(d, 'Swim') === 'laps' ? `<div class="hint">1 lap = ${S.poolLen || 18}m</div>` : ''}`;
     if (ty.includes('Class / sport')) h += `<div class="sect-s">🥊 Class / sport</div><label style="margin-top:4px"><input data-det="sport" value="${esc(d.sport || '')}" placeholder="e.g. Spin class, MMA, 5-a-side"></label>`;
     if (ty.includes('Mobility')) h += `<div class="sect-s">🧘 Mobility — areas</div>${dChips('mob', O.mob, true, d.mob)}`;
     h += `<div class="sect-s">♨️ After / extras</div>${dChips('recovery', O.recovery, true, d.recovery)}
@@ -888,7 +906,7 @@ ${(v.prep || []).some(x => !x.done) ? `<label class="check"><input type="checkbo
 function itMoreHtml() {
   const box = $('#it_more'); if (!box) return; if (!IT.more) { box.innerHTML = ''; return; }
   const v = itVals(), plan = IT.kind === 'plan';
-  let h = `<div class="two"><label>Date<input type="date" data-it="date" value="${v.date || ''}"></label>${plan ? '<span></span>' : `<label>Rough time<input type="time" data-it="time" value="${v.time || ''}"></label>`}</div>`;
+  let h = `<div class="two"><label>Date<input type="date" data-it="date" value="${v.date || ''}"></label>${plan ? '<span></span>' : `<label>Rough time${timeIn('data-it="time"', v.time)}</label>`}</div>`;
   const goals = activeGoals();
   h += `<label>Linked goal<select data-it="goalId" data-chg="itGoal"><option value="">— none —</option>${goals.map(g => `<option value="${g.id}" ${v.goalId === g.id ? 'selected' : ''}>${esc(g.title)}</option>`).join('')}</select></label>
 <label id="it_steplab" style="${v.goalId ? '' : 'display:none'}">Goal step<select id="it_step" data-it="stepId">${stepOptions(v.goalId, v.stepId)}</select></label>
@@ -908,10 +926,13 @@ function plansBlock(d, label = 'Plans') { const ps = dayPlans(d), sh = shiftRow(
 const IT_ACTS = ({
   itPick: () => { const el = $('#it_text'); if (el) IT.text = el.value; IT.kind = null; itBody(); },
   itChoose: el => { const v = el.dataset.v; IT.ign.cat = v !== 'plan'; if (v === 'plan') IT.kind = 'plan'; else { IT.kind = 'task'; IT.cat = v; IT.manual.tag = v; } if (IT.isNew) IT.parsed = parseSmart(IT.text, IT.ign); itBody(); },
+  itUnit: el => { const d = itDet(), v = el.dataset.v, u = el.dataset.u; d.cunit = d.cunit || {}; if (d.cunit[v] === u) return; d.cunit[v] = u; d.cardio = d.cardio || {}; d.cardio[v] = UNIT[u].dflt; IT.manual.detail = d; itCatHtml(); },
   itDet: el => { const d = itDet(), k = el.dataset.k, v = el.dataset.v, a = d[k] || []; d[k] = a.includes(v) ? a.filter(x => x !== v) : [...a, v]; IT.manual.detail = d; itCatHtml(); },
   itDetOne: el => { const d = itDet(), k = el.dataset.k, v = el.dataset.v; d[k] = d[k] === v ? '' : v; IT.manual.detail = d; if (d[k] === 'Spanish') itSuggestApp('Spanish'); if (d[k] === 'Money') itSuggestApp('Bank of Maxi'); itCatHtml(); itMoreHtml(); },
-  itCnt: el => { const d = itDet(), k = el.dataset.k, v = el.dataset.v, dd = Number(el.dataset.d), o = d[k] || {}, step = k === 'parts' ? 1 : 5;
-    if (!dd) { if (o[v]) delete o[v]; else o[v] = k === 'parts' ? 2 : 20; } else { o[v] = (o[v] || 0) + dd * step; if (o[v] < step) delete o[v]; }
+  itCnt: el => { const d = itDet(), k = el.dataset.k, v = el.dataset.v, dd = Number(el.dataset.d), o = d[k] || {};
+    let u = 'parts'; if (k === 'cardio') { d.cunit = d.cunit || {}; if (!d.cunit[v]) d.cunit[v] = o[v] ? 'min' : (CUNITS[v] || ['min'])[0]; u = d.cunit[v]; }
+    const step = k === 'parts' ? 1 : UNIT[u].step, dflt = k === 'parts' ? 2 : UNIT[u].dflt;
+    if (!dd) { if (o[v]) { delete o[v]; if (d.cunit) delete d.cunit[v]; } else o[v] = dflt; } else { o[v] = Math.round(((o[v] || 0) + dd * step) * 10) / 10; if (o[v] < step) { delete o[v]; if (d.cunit) delete d.cunit[v]; } }
     d[k] = o; IT.manual.detail = d; itCatHtml(); },
   itMore: () => { IT.more = !IT.more; itRefresh(true); },
   itIgn: el => { IT.ign[el.dataset.v] = true; IT.parsed = parseSmart(IT.text, IT.ign); itRefresh(true); },
@@ -941,6 +962,9 @@ const IT_ACTS = ({
   itPrepTog: el => { IT.manual.prep = (itVals().prep || []).map(x => x.id === el.dataset.id ? { ...x, done: !x.done } : x); itMoreHtml(); },
   itDelete: () => { const t = S.tasks.find(x => x.id === IT.id); if (t) { if (t.recurringId) t.status = 'dropped'; else S.tasks = S.tasks.filter(x => x.id !== IT.id); save(); } closeSheet(); IT = null; render(); toast('Removed'); }
 });
+function tinSync(i) { const b = i && i.nextElementSibling; if (b && b.classList.contains('tclr')) b.hidden = !i.value; }
+document.addEventListener('input', e => { if (e.target.type === 'time') tinSync(e.target); }, true);
+document.addEventListener('change', e => { if (e.target.type === 'time') tinSync(e.target); }, true);
 document.addEventListener('input', e => {
   const el = e.target; if (!IT) return;
   if (el.dataset.det) { const d = itDet(); d[el.dataset.det] = el.value; IT.manual.detail = d; return; }
@@ -1039,12 +1063,14 @@ const ACT = {
     t.items.forEach((it, i) => { if (have.has(it.title.toLowerCase())) return; S.tasks.push(normTask({ ...it, id: uid(), date: d, order: i })); n++; }); save(); closeSheet(); render(); toast(n + ' tasks added'); },
   editShift: el => { const d = el.dataset.v, s = S.shifts[d] || {}; formSheet({ title: 'Shift · ' + fmt(d), values: { start: s.start || '', end: s.end || '', off: !!s.off }, fields: [{ k: 'start', label: 'Start', type: 'time' }, { k: 'end', label: 'Finish', type: 'time' }, { k: 'off', label: 'Day off', type: 'check' }], onSave: v => { if (!v.start && !v.end && !v.off) delete S.shifts[d]; else S.shifts[d] = v; }, onDelete: s.start || s.off ? () => { delete S.shifts[d]; } : null, deleteLabel: 'Clear' }); },
   shiftWeek: el => { const ws = el.dataset.v || weekStart(today()); let rows = '';
-    for (let i = 0; i < 7; i++) { const d = addDays(ws, i), s = S.shifts[d] || {}; rows += `<div style="display:grid;grid-template-columns:52px 1fr 1fr 46px;gap:6px;align-items:center;margin-top:8px"><b class="small">${fmt(d, { weekday: 'short', day: 'numeric' })}</b><input type="time" data-sw="${d}" data-f="start" value="${s.start || ''}"><input type="time" data-sw="${d}" data-f="end" value="${s.end || ''}"><label class="check" style="margin:0;font-size:12px"><input type="checkbox" data-sw="${d}" data-f="off" ${s.off ? 'checked' : ''}>Off</label></div>`; }
-    openSheet(`<h3>Shifts · w/c ${fmt(ws, { day: 'numeric', month: 'short' })}</h3><div class="small muted">Start and finish. Tick Off for days off.</div>${rows}<div class="row-btns"><button class="btn" data-act="swCopy" data-v="${ws}">Copy last week</button><button class="btn primary" data-act="swSave" data-v="${ws}">Save</button></div>`); },
+    for (let i = 0; i < 7; i++) { const d = addDays(ws, i), s = S.shifts[d] || {}; rows += `<div class="swrow"><div class="swday"><b>${fmt(d, { weekday: 'short', day: 'numeric' })}</b><label class="check"><input type="checkbox" data-sw="${d}" data-f="off" ${s.off ? 'checked' : ''}> Day off</label><button type="button" class="swclr" data-act="swClear" data-v="${d}">Clear</button></div><div class="two">${timeIn(`data-sw="${d}" data-f="start" aria-label="Start"`, s.start)}${timeIn(`data-sw="${d}" data-f="end" aria-label="Finish"`, s.end)}</div></div>`; }
+    openSheet(`<h3>Shifts · w/c ${fmt(ws, { day: 'numeric', month: 'short' })}</h3><div class="small muted">✕ clears a time · Clear empties the day</div>${rows}<div class="row-btns"><button class="btn" data-act="swCopy" data-v="${ws}">Copy last week</button><button class="btn primary" data-act="swSave" data-v="${ws}">Save</button></div>`); },
   swCopy: el => { const ws = el.dataset.v; for (let i = 0; i < 7; i++) { const s = S.shifts[addDays(ws, i - 7)]; const d = addDays(ws, i); if (!s) continue;
-    const st = document.querySelector(`[data-sw="${d}"][data-f=start]`), en = document.querySelector(`[data-sw="${d}"][data-f=end]`), of = document.querySelector(`[data-sw="${d}"][data-f=off]`); st.value = s.start || ''; en.value = s.end || ''; of.checked = !!s.off; } },
+    const st = document.querySelector(`[data-sw="${d}"][data-f=start]`), en = document.querySelector(`[data-sw="${d}"][data-f=end]`), of = document.querySelector(`[data-sw="${d}"][data-f=off]`); st.value = s.start || ''; en.value = s.end || ''; of.checked = !!s.off; [st, en].forEach(tinSync); } },
+  swClear: el => { const d = el.dataset.v; document.querySelectorAll(`[data-sw="${d}"]`).forEach(i => { if (i.type === 'checkbox') i.checked = false; else { i.value = ''; tinSync(i); } }); },
+  clrTime: el => { const i = el.previousElementSibling; if (!i) return; i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); tinSync(i); },
   swSave: el => { const ws = el.dataset.v; for (let i = 0; i < 7; i++) { const d = addDays(ws, i); const st = document.querySelector(`[data-sw="${d}"][data-f=start]`).value, en = document.querySelector(`[data-sw="${d}"][data-f=end]`).value, of = document.querySelector(`[data-sw="${d}"][data-f=off]`).checked;
-    if (!st && !en && !of) delete S.shifts[d]; else S.shifts[d] = { start: st, end: en, off: of }; } save(); closeSheet(); render(); toast('Shifts saved'); },
+    if (!st && !en && !of) delete S.shifts[d]; else S.shifts[d] = { ...(S.shifts[d] || {}), start: st, end: en, off: of }; } save(); closeSheet(); render(); toast('Shifts saved'); },
 
   /* calendar */
   calMode: el => { V.cal.mode = el.dataset.v; render(); },
