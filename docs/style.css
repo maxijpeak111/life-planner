@@ -187,3 +187,8 @@ a{color:var(--accent-ink)}
 .locked{font-family:var(--serif);text-align:center;padding:18px;color:var(--muted)}
 .jprev{font-size:13px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sheet label.check>span{flex:1;min-width:0;overflow-wrap:anywhere}
+
+.sheet{position:absolute}
+.sheet-x{position:absolute;top:10px;right:12px;width:34px;height:34px;border-radius:50%;background:var(--card2);color:var(--muted);font-size:15px;z-index:2}
+.sheet h3{padding-right:44px}
+.back{font-size:16px;font-weight:600}

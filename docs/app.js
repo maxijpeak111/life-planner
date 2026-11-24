@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.1';
+const VERSION = '1.2';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -275,6 +275,21 @@ function render() {
   renderTabs();
 }
 function go(tab) { V.tab = tab; render(); window.scrollTo(0, 0); }
+/* in-app back: every jump to another page remembers where you were */
+const HIST = [];
+function placeName(v) {
+  if (v.tab === 'today') return 'Today';
+  if (v.tab === 'calendar') return { day: 'Day', week: 'Week', month: 'Month', year: 'Year' }[v.cal.mode];
+  if (v.tab === 'goals') return v.goals.id ? 'Goal' : 'Goals';
+  if (v.tab === 'journal') return 'Journal';
+  if (v.tab === 'more') return v.more ? ({ habits: 'Habits', inbox: 'Inbox', vision: 'Vision', templates: 'Templates', apps: 'Apps', settings: 'Settings' }[v.more] || (COLL[v.more] && COLL[v.more].title) || 'More') : 'More';
+  return 'Back';
+}
+function nav(fn) { HIST.push({ v: JSON.parse(JSON.stringify(V)), y: window.scrollY }); if (HIST.length > 30) HIST.shift(); fn(); render(); window.scrollTo(0, 0); }
+function backBtn(fallbackAct, fallbackLabel, extra = '') {
+  if (HIST.length) return `<button class="back" data-act="back">‹ ${esc(placeName(HIST[HIST.length - 1].v))}</button>`;
+  return fallbackAct ? `<button class="back" data-act="${fallbackAct}" ${extra}>‹ ${fallbackLabel}</button>` : '';
+}
 
 function taskRow(t, opts = {}) {
   const g = t.goalId && goalById(t.goalId);
@@ -365,7 +380,7 @@ ${slotList(rest, 'Nothing else planned. Tap + to add, or use a template.')}
 /* ----- Calendar ----- */
 function renderCal() {
   const c = V.cal;
-  let h = `<div class="page-top"><h2>Calendar</h2></div><div class="wrap" style="padding-top:4px"><div class="seg">${['day', 'week', 'month', 'year'].map(m => `<button class="${c.mode === m ? 'on' : ''}" data-act="calMode" data-v="${m}">${m[0].toUpperCase() + m.slice(1)}</button>`).join('')}</div>`;
+  let h = `<div class="page-top">${backBtn()}${HIST.length ? '<span style="flex:1"></span></div><div class="page-top" style="padding-top:0">' : ''}<h2>Calendar</h2></div><div class="wrap" style="padding-top:4px"><div class="seg">${['day', 'week', 'month', 'year'].map(m => `<button class="${c.mode === m ? 'on' : ''}" data-act="calMode" data-v="${m}">${m[0].toUpperCase() + m.slice(1)}</button>`).join('')}</div>`;
   if (c.mode === 'day') h += calDay(); else if (c.mode === 'week') h += calWeek(); else if (c.mode === 'month') h += calMonth(); else h += calYear();
   return h + '</div>';
 }
@@ -447,7 +462,7 @@ ${feeds.length ? `<div class="feeds">Feeds into: ${feeds.map(f => esc(f.title)).
 function goalDetail(g) {
   const feeds = g.feeds.map(goalById).filter(Boolean), fedBy = S.goals.filter(x => x.feeds.includes(g.id));
   const hz = { short: 'Short term', mid: 'Mid term', long: 'Long term' }[g.horizon];
-  let h = `<div class="page-top"><button class="back" data-act="goalBack">‹ Goals</button><span style="flex:1"></span><button class="btn sm" data-act="editGoal" data-id="${g.id}">Edit</button></div><div class="wrap" style="padding-top:0">
+  let h = `<div class="page-top">${backBtn('goalBack', 'Goals')}<span style="flex:1"></span><button class="btn sm" data-act="editGoal" data-id="${g.id}">Edit</button></div><div class="wrap" style="padding-top:0">
 <div class="gp">${g.pillars.map(p => { const pl = pillarById(p); return pl ? pl.icon + ' ' + esc(pl.name) : ''; }).join(' · ')}</div>
 <h2 style="margin-top:4px">${esc(g.title)}</h2>
 <div class="meta" style="margin-top:4px">${hz}${g.deadline ? ' · by ' + fmt(g.deadline, { day: 'numeric', month: 'long', year: 'numeric' }) : ''}${g.achieved ? ' · 🏆 Achieved ' + fmt(g.achieved) : ''}</div>
@@ -474,7 +489,7 @@ function linkify(s) { return esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$
 /* ----- Journal ----- */
 function renderJournal() {
   const J = V.journal;
-  let h = `<div class="page-top"><h2>Journal</h2></div><div class="wrap" style="padding-top:4px"><div class="seg">${[['daily', 'Daily'], ['weekly', 'Weekly review'], ['monthly', 'Monthly review']].map(([k, l]) => `<button class="${J.mode === k ? 'on' : ''}" data-act="jMode" data-v="${k}">${l}</button>`).join('')}</div>`;
+  let h = `<div class="page-top">${backBtn()}${HIST.length ? '<span style="flex:1"></span></div><div class="page-top" style="padding-top:0">' : ''}<h2>Journal</h2></div><div class="wrap" style="padding-top:4px"><div class="seg">${[['daily', 'Daily'], ['weekly', 'Weekly review'], ['monthly', 'Monthly review']].map(([k, l]) => `<button class="${J.mode === k ? 'on' : ''}" data-act="jMode" data-v="${k}">${l}</button>`).join('')}</div>`;
   if (J.mode === 'daily') h += jDaily(); else if (J.mode === 'weekly') h += jWeekly(); else h += jMonthly();
   return h + '</div>';
 }
@@ -543,7 +558,7 @@ function renderMore() {
   const rows = [['habits', '🔥', 'Habits', activeHabits().length], ['inbox', '📥', 'Inbox', open || ''], ['vision', '🏔️', 'Vision & why', ''], ['wins', '🏆', 'Wins', S.wins.length + S.goals.filter(g => g.achieved).length || ''], ['people', '👥', 'People', S.people.length || ''], ['reading', '📚', 'Reading & learning', S.reading.filter(r => r.status === 'now').length ? S.reading.filter(r => r.status === 'now').length + ' now' : ''], ['admin', '🗂️', 'Life admin', S.admin.filter(a => !a.done).length || ''], ['travel', '✈️', 'Travel bucket list', S.travel.length || ''], ['timeline', '🧭', 'Life timeline', S.timeline.length || ''], ['templates', '🧩', 'Templates & repeats', ''], ['apps', '📱', 'My other apps', ''], ['settings', '⚙️', 'Settings & backup', '']];
   return `<div class="page-top"><h2>More</h2></div><div class="wrap" style="padding-top:4px"><div class="list">${rows.map(([k, ic, nm, ct]) => `<button class="mrow" data-act="moreGo" data-v="${k}"><span class="ic">${ic}</span><span class="nm">${nm}</span><span class="ct">${ct}</span><span class="chev">›</span></button>`).join('')}</div><p class="small muted center" style="margin-top:16px">Life Planner v${VERSION} · saved on this phone</p></div>`;
 }
-function moreTop(title, btn = '') { return `<div class="page-top"><button class="back" data-act="moreGo" data-v="">‹ More</button><span style="flex:1"></span>${btn}</div><div class="wrap" style="padding-top:0"><h2 style="margin-bottom:8px">${title}</h2>`; }
+function moreTop(title, btn = '') { return `<div class="page-top">${backBtn('moreGo', 'More', 'data-v=""')}<span style="flex:1"></span>${btn}</div><div class="wrap" style="padding-top:0"><h2 style="margin-bottom:8px">${title}</h2>`; }
 function collPage(c) {
   const items = [...S[c.key]].sort(c.sort || (() => 0));
   let h = moreTop(c.icon + ' ' + c.title, `<button class="btn sm" data-act="collAdd" data-v="${c.key}">＋ Add</button>`);
@@ -616,7 +631,7 @@ ${snap ? `<button class="btn sm" style="margin-top:10px" data-act="restoreSnap">
 
 /* ---------- sheets & forms ---------- */
 let FORM = null;
-function openSheet(html) { const r = $('#sheet-root'); r.innerHTML = `<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog"><div class="grab"></div>${html}</div>`; r.classList.add('open'); }
+function openSheet(html) { const r = $('#sheet-root'); r.innerHTML = `<div class="scrim" data-act="closeSheet"></div><div class="sheet" role="dialog"><div class="grab"></div><button class="sheet-x" data-act="closeSheet" aria-label="Close">✕</button>${html}</div>`; r.classList.add('open'); }
 function closeSheet() { const r = $('#sheet-root'); r.classList.remove('open'); r.innerHTML = ''; FORM = null; }
 function fieldHtml(f) {
   const v = FORM.values[f.k] ?? '', id = 'f_' + f.k;
@@ -703,7 +718,8 @@ function pickDateSheet(title, onPick, init = today()) {
 let PD = null;
 
 const ACT = {
-  tab: el => { if (el.dataset.v === 'goals') V.goals.id = null; if (el.dataset.v === 'more' && V.tab === 'more') V.more = null; go(el.dataset.v); },
+  tab: el => { HIST.length = 0; if (el.dataset.v === 'goals') V.goals.id = null; if (el.dataset.v === 'more' && V.tab === 'more') V.more = null; if (el.dataset.v === 'calendar' && V.tab === 'calendar' && V.cal.mode === 'day') V.cal.mode = 'week'; go(el.dataset.v); },
+  back: () => { const h = HIST.pop(); if (!h) return; Object.assign(V, h.v); render(); window.scrollTo(0, h.y || 0); },
   closeSheet, link: () => true,
   newTask: () => taskSheet(null),
   editTask: el => { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) taskSheet(t); },
@@ -765,9 +781,9 @@ const ACT = {
   slipAllDrop: () => { if (!confirm('Drop all slipped tasks?')) return; slipped().forEach(t => { t.status = 'dropped'; t.droppedOn = today(); }); save(); closeSheet(); render(); },
   pdQuick: el => { const f = PD; PD = null; closeSheet(); f && f(el.dataset.v); render(); },
   pdOk: () => { const d = $('#pd_date').value; if (!d) return; const f = PD; PD = null; closeSheet(); f && f(d); render(); },
-  openJournalDay: el => { V.journal.mode = 'daily'; V.journal.date = el.dataset.v || today(); go('journal'); },
-  openWeekly: el => { V.journal.mode = 'weekly'; V.journal.week = el.dataset.v || weekStart(today()); go('journal'); },
-  openMonthly: el => { V.journal.mode = 'monthly'; V.journal.month = el.dataset.v || monthKey(today()); go('journal'); },
+  openJournalDay: el => { if (V.tab === 'journal' && V.journal.mode === 'daily') { V.journal.date = el.dataset.v || today(); render(); window.scrollTo(0, 0); return; } nav(() => { V.journal.mode = 'daily'; V.journal.date = el.dataset.v || today(); V.tab = 'journal'; }); },
+  openWeekly: el => nav(() => { V.journal.mode = 'weekly'; V.journal.week = el.dataset.v || weekStart(today()); V.tab = 'journal'; }),
+  openMonthly: el => nav(() => { V.journal.mode = 'monthly'; V.journal.month = el.dataset.v || monthKey(today()); V.tab = 'journal'; }),
   fromGoals: el => {
     const d = el.dataset.v || today(); const rows = [];
     activeGoals().forEach(g => allSteps(g).filter(s => s.status !== 'done').slice(0, 3).forEach(s => rows.push([g, s])));
@@ -788,7 +804,7 @@ const ACT = {
 
   /* calendar */
   calMode: el => { V.cal.mode = el.dataset.v; render(); },
-  calDay: el => { V.cal.mode = 'day'; V.cal.date = el.dataset.v; go('calendar'); },
+  calDay: el => nav(() => { V.cal.mode = 'day'; V.cal.date = el.dataset.v; V.tab = 'calendar'; }),
   calToday: () => { V.cal.date = today(); render(); },
   calStep: el => { const v = el.dataset.v; if (v.endsWith('m')) V.cal.date = addMonths(monthKey(V.cal.date), v.startsWith('-') ? -1 : 1) + '-01'; else if (v.endsWith('y')) V.cal.date = (Number(V.cal.date.slice(0, 4)) + (v.startsWith('-') ? -1 : 1)) + '-01-01'; else V.cal.date = addDays(V.cal.date, Number(v)); render(); },
   addTimeline: () => collForm('timeline', null),
@@ -797,7 +813,7 @@ const ACT = {
   goalH: el => { V.goals.h = el.dataset.v; V.goals.archived = false; render(); },
   goalP: el => { V.goals.p = el.dataset.v; render(); },
   goalArchived: () => { V.goals.archived = !V.goals.archived; render(); },
-  openGoal: el => { V.goals.id = el.dataset.id; go('goals'); },
+  openGoal: el => nav(() => { V.goals.id = el.dataset.id; V.tab = 'goals'; }),
   goalBack: () => { V.goals.id = null; render(); },
   newGoal: () => goalForm(null),
   editGoal: el => goalForm(goalById(el.dataset.id)),
@@ -826,8 +842,8 @@ const ACT = {
   reviewDone: el => { const st = el.dataset.v === 'w' ? S.weekly : S.monthly, k = el.dataset.key; st[k] = st[k] || {}; st[k].done = !st[k].done; save(); render(); if (st[k].done) toast('Review complete'); },
 
   /* more */
-  moreGo: el => { V.more = el.dataset.v || null; go('more'); },
-  moreLetter: () => { S.vision.letter.opened = true; save(); V.more = 'vision'; go('more'); },
+  moreGo: el => { if (!el.dataset.v) { V.more = null; HIST.length = 0; go('more'); return; } nav(() => { V.more = el.dataset.v; V.tab = 'more'; }); },
+  moreLetter: () => { S.vision.letter.opened = true; save(); nav(() => { V.more = 'vision'; V.tab = 'more'; }); },
   collAdd: el => collForm(el.dataset.v, null),
   collEdit: el => collForm(el.dataset.v, S[el.dataset.v].find(x => x.id === el.dataset.id)),
   collToDay: el => { const c = COLL[el.dataset.v], it = S[el.dataset.v].find(x => x.id === el.dataset.id); taskSheet(null, c.toDay(it)); },
