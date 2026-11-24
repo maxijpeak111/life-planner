@@ -28,5 +28,6 @@ NOTE: the repo is public — keep personal/sensitive details out of updates.json
   "pillars": [], "shifts": { "2026-11-25": { "start": "14:00", "end": "22:30" } },
   "vision": { "identity": "", "philosophy": "", "idealDay": "", "quotes": [] } } } ] }
 ```
+To link existing goals without touching their steps, use `"goalLinks": [ { "id": "g-x", "feeds": ["g-bigger"], "horizon": "mid", "start": "2027-01-01" } ]` in `data` (feeds are added, never removed). Goals form a ladder: steps → short → mid → long; `rollPct()` rolls feeder progress up. Goals may have an optional `start` date.
 Default pillar ids: physical, ptbiz, money, travel, life, spanish.
 Goal step research must be accurate and sourced (Maxi's rule: no generic or inaccurate info).
