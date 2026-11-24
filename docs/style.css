@@ -248,3 +248,23 @@ details.fold[open] summary::before{content:'▾ '}
 .cunit button{font-size:12px;padding:4px 8px;border-radius:7px;color:var(--muted)}
 .cunit button.on{background:var(--card);color:var(--text);font-weight:600}
 .stepr small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+
+/* coach: day type, fuel, smoke-free, morning/evening */
+.coachn{background:color-mix(in srgb,var(--accent) 12%,var(--card));border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
+.dstrip{margin-top:12px}
+.dstrip .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.card.coach{display:flex;flex-direction:column;gap:4px;padding:11px 12px;min-height:118px}
+.card.coach+.card.coach{margin-top:0}
+.coach .ch{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)}
+.coach .btn.sm{align-self:flex-start;margin-top:auto}
+.big{font-size:24px;font-weight:700;line-height:1.1}
+.big .of{font-size:14px;font-weight:500;color:var(--muted)}
+.cnt{display:flex;align-items:center;gap:10px}
+.cnt>button{width:34px;height:34px;border-radius:50%;background:var(--card2);font-size:18px;flex:none}
+.cnt>div{flex:1;text-align:center}
+.mrow .tt{flex:1;min-width:0}
+.mrow .tt .title{overflow-wrap:anywhere}
+.mrow .chev{flex:none;white-space:nowrap}
+.sheet p{white-space:normal;overflow-wrap:anywhere}
+.cnt .small{line-height:1.2}
+.mrow,.mrow .title{white-space:normal}

@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '1.7';
+const VERSION = '1.8';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -98,7 +98,11 @@ function defaults() {
       { name: 'Spanish', url: 'https://maxijpeak111.github.io/spanish-app/' },
       { name: 'Bank of Maxi', url: 'https://maxijpeak111.github.io/Bank-of-Maxi/' }
     ],
-    appliedUpdates: [], lastBackup: '', lastOpen: t, poolLen: 18
+    appliedUpdates: [], lastBackup: '', lastOpen: t, poolLen: 18,
+    dayTypes: {},
+    fuel: { override: {} },
+    smoke: { quit: '', baselineFrom: '', baseline: '', steps: [], log: {} },
+    block: {}
   };
 }
 function migrate(d) {
@@ -106,6 +110,7 @@ function migrate(d) {
   for (const k in def) if (d[k] === undefined) d[k] = def[k];
   for (const k in def.vision) if (d.vision[k] === undefined) d.vision[k] = def.vision[k];
   for (const k in def.tagColors) if (!d.tagColors[k]) d.tagColors[k] = def.tagColors[k];
+  for (const o of ['fuel', 'smoke', 'block']) for (const k in def[o]) if (d[o][k] === undefined) d[o][k] = def[o][k];
   d.goals.forEach(normGoal);
   d.schema = SCHEMA;
   return d;
@@ -325,7 +330,6 @@ function nudges() {
   const sl = slipped();
   if (sl.length) out.push({ html: `<b>${sl.length} task${sl.length > 1 ? 's' : ''}</b> slipped from earlier days`, act: 'sortSlipped', go: 'Sort' });
   const yj = S.journal[y];
-  if (S.created <= y && !(yj && (yj.well || yj.slipped || yj.change || yj.free))) out.push({ html: "Yesterday's check-in wasn't done", act: 'openJournalDay', v: y, go: 'Add' });
   const lw = addDays(weekStart(t), -7);
   if (S.created <= addDays(lw, 6) && !(S.weekly[lw] && S.weekly[lw].done)) out.push({ html: `Weekly review for w/c ${fmt(lw, { day: 'numeric', month: 'short' })} is ready`, act: 'openWeekly', v: lw, go: 'Review' });
   const lm = addMonths(monthKey(t), -1);
@@ -367,6 +371,7 @@ function renderToday() {
 ${S.vision.banner ? `<p class="banner">${esc(S.vision.banner)}</p>` : ''}
 ${yChange ? `<p class="line-sub">Yesterday you said: <i>${esc(yChange)}</i></p>` : ''}
 ${nudges()}
+${coachToday(t)}
 ${plansBlock(t, 'Plans today')}
 <div class="sect"><span class="grow">Priorities</span><button data-act="fromGoals" data-v="${t}">＋ From goals</button></div>
 ${pri.length ? `<div class="list">${pri.map(x => taskRow(x)).join('')}</div>` : `<div class="list"><div class="empty">Star ★ a task to pin it here.</div></div>`}
@@ -379,7 +384,7 @@ ${pri.length ? `<div class="list">${pri.map(x => taskRow(x)).join('')}</div>` : 
 ${hs.length ? `<div class="sect">Habits</div><div class="habits">${hs.map(h => `<button class="hchip ${habitDone(h.id, t) ? 'on' : ''}" data-act="toggleHabit" data-id="${h.id}" data-v="${t}">${habitDone(h.id, t) ? '✓' : '○'} ${esc(h.name)}${streak(h.id) ? ` <span class="n">${streak(h.id)}</span>` : ''}</button>`).join('')}</div>` : ''}
 <div class="sect"><span class="grow">Rest of today</span><button data-act="applyTemplate" data-v="${t}">Use template</button></div>
 ${slotList(rest, 'Nothing else planned. Tap + to add, or use a template.')}
-<button class="btn full" style="margin-top:18px" data-act="openJournalDay" data-v="${t}">🌙 End-of-day check-in</button>
+<button class="btn full" style="margin-top:18px" data-act="eveningReview">🌙 Evening review</button>
 </div>`;
 }
 
@@ -638,6 +643,130 @@ ${snap ? `<button class="btn sm" style="margin-top:10px" data-act="restoreSnap">
   h += `<div class="sect">Pillars</div><button class="btn full" data-act="managePillars">Manage pillars</button>`;
   return h + '</div>';
 }
+
+/* ---------- coach: day types, fuel targets, smoke-free, morning/evening, training week ----------
+   New optional fields (added by migrate): dayTypes, fuel, smoke, block. Nothing existing is changed. */
+const DAYTYPES = [['work', '💼 Work day', 'Shorter session · 2–3 quick steps or 1 longer one before the shift'], ['off', '🌿 Day off', 'Fuller training · course in blocks (3–4 hrs) · 1 business/content step'], ['bad', '🪫 Low day', 'The floor: stretch, one step, no smoking — still counts']];
+const DTN = Object.fromEntries(DAYTYPES.map(x => [x[0], x]));
+function dayType(d) { if (S.dayTypes[d]) return S.dayTypes[d]; const s = S.shifts[d]; if (s && s.off) return 'off'; if (s && s.start) return 'work'; return ''; }
+const FUELN = { rest: 'Rest day', train: 'Training day', big: 'Big day' };
+function fuelType(d) {
+  const o = S.fuel.override[d]; if (o) return o;
+  const ts = dayTasks(d).filter(t => t.tag === 'T' && t.status !== 'dropped');
+  if (!ts.length) return 'rest';
+  const mins = ts.reduce((a, t) => a + (Number(t.length) || 0), 0);
+  const big = ts.some(t => { const dt = t.detail || {}, c = dt.cardio || {}, u = dt.cunit || {}; return (dt.parts || {}).Legs || Object.keys(c).some(k => u[k] === 'km' ? c[k] >= 10 : u[k] === 'laps' ? c[k] >= 40 : c[k] >= 60); }) || /long run/i.test(ts.map(t => t.title).join(' '));
+  return big || mins >= 100 ? 'big' : 'train';
+}
+function fuelSet() { return !!(S.fuel.rest && S.fuel.train && S.fuel.big); }
+function fuelLine(d) { const k = fuelType(d), f = S.fuel[k] || { kcal: 0, p: 0, c: 0, f: 0 }; return { k, f, txt: `${FUELN[k]} · ${f.kcal.toLocaleString('en-GB')} kcal · P ${f.p}g · C ${f.c}g · F ${f.f}g` }; }
+const TIPS = {
+  study: ['Big study day: oily fish, eggs, berries and oats keep energy steady — no sugar crash.', 'Studying for hours? Water bottle on the desk, and a protein snack every 3–4 hours.'],
+  swim: ['Swim this morning: banana and toast 60–90 minutes before.', 'After the pool: protein + carbs within a couple of hours (e.g. eggs on toast).'],
+  weights: ['After weights: 30–40g protein within a couple of hours — chicken wrap, Greek yoghurt or a shake.', 'Spread protein: 20–40g every 3–4 hours beats one huge serving.'],
+  shift: ['Long shift: pack a protein meal so the break isn\'t the vending machine.', 'Biggest plate before the shift (around 13:00–14:00), something small and protein-led after.', 'Craving at work? Water first, then fruit or nuts.'],
+  rest: ['Rest day: same protein, fewer carbs — fill up on veg.', 'Rest day is when muscle gets built — hit the protein target anyway.'],
+  big: ['Big day: carbs at every meal — rice, oats, potatoes, pasta.', 'Long session coming: eat a proper carb meal 2–3 hours before.'],
+  any: ['Vitamin D 10 micrograms a day through winter.', 'Creatine daily — timing doesn\'t matter, consistency does.', 'Nothing too late: last proper meal before the shift ends.']
+};
+function fuelTip(d) {
+  const ts = dayTasks(d), pool = [...TIPS.any];
+  if (ts.filter(t => t.tag === 'S').reduce((a, t) => a + (Number(t.length) || 0), 0) >= 90) pool.push(...TIPS.study, ...TIPS.study);
+  if (ts.some(t => t.tag === 'T' && (/swim/i.test(t.title) || (t.detail && t.detail.cardio && t.detail.cardio.Swim)))) pool.push(...TIPS.swim);
+  if (ts.some(t => t.tag === 'T' && t.detail && t.detail.parts && Object.keys(t.detail.parts).length)) pool.push(...TIPS.weights);
+  if (dayType(d) === 'work') pool.push(...TIPS.shift);
+  const ft = fuelType(d); if (ft === 'rest') pool.push(...TIPS.rest); if (ft === 'big') pool.push(...TIPS.big);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+/* smoke-free: count during the taper, streak after the quit date */
+function smokeBase() {
+  const s = S.smoke; if (s.baseline) return Number(s.baseline);
+  const first = (s.steps || []).length ? s.steps[0][0] : s.quit;
+  const days = Object.keys(s.log).filter(k => k >= s.baselineFrom && k < first);
+  return days.length ? Math.round(days.reduce((a, k) => a + Number(s.log[k] || 0), 0) / days.length) : null;
+}
+function smokeCap(d) { const s = S.smoke; if (d >= s.quit) return 0; let f = null; (s.steps || []).forEach(([from, x]) => { if (d >= from) f = x; }); if (f === null) return null; const b = smokeBase(); return b == null ? null : Math.round(b * f); }
+function smokeFreeDays(d = today()) {
+  const s = S.smoke; if (!s.quit || d < s.quit) return null;
+  const slips = Object.keys(s.log).filter(k => k >= s.quit && k <= d && Number(s.log[k]) > 0).sort();
+  const from = slips.length ? addDays(slips[slips.length - 1], 1) : s.quit;
+  return d >= from ? Math.round((pd(d) - pd(from)) / 864e5) + 1 : 0;
+}
+function smokeCard(d) {
+  const s = S.smoke, n = Number(s.log[d] || 0);
+  if (!s.quit) return `<div class="card coach"><div class="ch"><span>🚭 Smoke-free</span></div><div class="small muted">Not set up.</div><button class="btn sm" data-act="smokeSettings">Set up</button></div>`;
+  if (d >= s.quit) { const days = smokeFreeDays(d); return `<div class="card coach"><div class="ch"><span>🚭 Smoke-free</span><button class="small muted" data-act="smokeSettings">Edit</button></div><div class="big">${days} day${days === 1 ? '' : 's'}</div><button class="btn sm" data-act="smokeSlip" data-v="${d}">Log a slip</button></div>`; }
+  const cap = smokeCap(d), left = Math.max(0, Math.round((pd(s.quit) - pd(d)) / 864e5));
+  return `<div class="card coach"><div class="ch"><span>🚭 Taper</span><button class="small muted" data-act="smokeSettings">Edit</button></div><div class="cnt"><button data-act="smokeAdd" data-v="${d}" data-n="-1" aria-label="One less">−</button><div><div class="big">${n}${cap != null ? `<span class="of"> / ${cap}</span>` : ''}</div><div class="small muted">${cap == null ? 'Baseline week' : n > cap ? 'Over today\'s cap' : 'Today\'s cap'}</div></div><button data-act="smokeAdd" data-v="${d}" data-n="1" aria-label="One more">＋</button></div><div class="small muted">${left} day${left === 1 ? '' : 's'} to zero</div></div>`;
+}
+function fuelCard(d) { if (!fuelSet()) return `<div class="card coach"><div class="ch"><span>🥗 Fuel</span></div><div class="small muted">Daily targets not set yet — open the plan file from Claude (More → Add things from Claude).</div></div>`; const { k, f } = fuelLine(d); return `<div class="card coach"><div class="ch"><span>🥗 ${FUELN[k]}</span><button class="small muted" data-act="fuelType" data-v="${d}">Change</button></div><div class="big">${f.kcal.toLocaleString('en-GB')}<span class="of"> kcal</span></div><div class="small">P ${f.p}g · C ${f.c}g · F ${f.f}g</div><button class="btn sm" data-act="fuelTip" data-v="${d}">💡 Tip</button></div>`; }
+function dayStrip(d) {
+  const ty = dayType(d), open = dayTasks(d).filter(t => t.status === 'open').length;
+  return `<div class="dstrip"><div class="chips">${DAYTYPES.map(([k, l]) => `<button class="chip ${ty === k ? 'on' : ''}" data-act="setDayType" data-v="${k}" data-d="${d}">${l}</button>`).join('')}</div><div class="small muted" style="margin-top:6px">${ty ? esc(DTN[ty][2]) : 'Pick the kind of day — it sets how much goes on it.'} · ${open} open</div></div>`;
+}
+function coachToday(t) {
+  const h = new Date().getHours();
+  const card = h < 16 ? `<button class="nudge coachn" data-act="morningPlan"><span>☀️ <b>Morning plan</b> — set the day up</span><span class="go">Open ›</span></button>` : `<button class="nudge coachn" data-act="eveningReview"><span>🌙 <b>Evening review</b> — close the day</span><span class="go">Open ›</span></button>`;
+  return card + dayStrip(t) + `<div class="tiles">${fuelCard(t)}${smokeCard(t)}</div>`;
+}
+/* next step from each active goal */
+function upNext(limit = 6) { const out = []; activeGoals().forEach(g => { const s = nextStep(g); if (s) out.push([g, s]); }); return out.slice(0, limit); }
+/* swim target for the training block */
+function swimTarget(d) { const b = S.block; if (!b || !b.start || !b.swim) return null; const wk = Math.floor((pd(d) - pd(b.start)) / (7 * 864e5)); if (wk < 0) return b.swim[0]; return wk < b.swim.length ? b.swim[wk] : null; }
+function applyTpl(t, d) {
+  const have = new Set(S.tasks.filter(x => x.date === d && x.status !== 'dropped').map(x => x.title.toLowerCase())); let n = 0;
+  t.items.forEach((it, i) => {
+    if (have.has(it.title.toLowerCase())) return;
+    const nt = normTask({ ...JSON.parse(JSON.stringify(it)), id: uid(), date: d, order: i });
+    if (it.blockSwim) { delete nt.blockSwim; const st = swimTarget(d); if (st) { nt.detail = nt.detail || {}; nt.detail.cardio = { ...(nt.detail.cardio || {}), Swim: st }; nt.detail.cunit = { ...(nt.detail.cunit || {}), Swim: 'laps' }; nt.note = `Continuous target this week: ${st} laps (${st * (S.poolLen || 18)}m). ` + (nt.note || ''); } }
+    S.tasks.push(nt); n++;
+  });
+  return n;
+}
+const TRI_WORK = ['tpl-tri-w1', 'tpl-tri-w2', 'tpl-tri-w3', 'tpl-tri-w4'], TRI_OFF = ['tpl-tri-o1', 'tpl-tri-o2', 'tpl-tri-o3'];
+const COACH_ACTS = {
+  setDayType: el => { const d = el.dataset.d || today(), v = el.dataset.v; if (S.dayTypes[d] === v) delete S.dayTypes[d]; else S.dayTypes[d] = v; save(); if ($('#sheet-root').classList.contains('open') && $('#mp_sheet')) ACT.morningPlan(); else render(); },
+  smokeAdd: el => { const d = el.dataset.v, n = Math.max(0, Number(S.smoke.log[d] || 0) + Number(el.dataset.n)); if (n) S.smoke.log[d] = n; else delete S.smoke.log[d]; save(); if ($('#ev_sheet')) ACT.eveningReview(); else render(); },
+  smokeSlip: el => { const d = el.dataset.v; S.smoke.log[d] = Number(S.smoke.log[d] || 0) + 1; save(); render(); toast('Logged. Streak restarts tomorrow — keep going.'); },
+  smokeSettings: () => formSheet({ title: 'Smoke-free settings', values: { baseline: S.smoke.baseline || '', quit: S.smoke.quit || '' }, fields: [{ k: 'baseline', label: 'Baseline per day (leave blank to use your counting week)', type: 'number' }, { k: 'quit', label: 'Zero from', type: 'date' }], extra: `<p class="small muted">Taper: ${(S.smoke.steps || []).map(([d, x]) => `${fmt(d, { day: 'numeric', month: 'short' })} → ${Math.round(x * 100)}%`).join(' · ')} of baseline, then zero.</p>`, onSave: v => { S.smoke.baseline = v.baseline || ''; if (v.quit) S.smoke.quit = v.quit; } }),
+  fuelType: el => { if (!fuelSet()) return; const d = el.dataset.v, cur = fuelType(d); openSheet(`<h3>Fuel for ${d === today() ? 'today' : fmt(d)}</h3><div class="list">${['rest', 'train', 'big'].map(k => { const f = S.fuel[k]; return `<button class="mrow" data-act="fuelSet" data-v="${d}" data-k="${k}"><div class="tt"><div class="title">${k === cur ? '✓ ' : ''}${FUELN[k]}</div><div class="meta">${f.kcal} kcal · P ${f.p}g · C ${f.c}g · F ${f.f}g</div></div></button>`; }).join('')}<button class="mrow" data-act="fuelSet" data-v="${d}" data-k=""><div class="tt"><div class="title">Automatic</div><div class="meta">Worked out from today's training</div></div></button></div><p class="small muted">Targets come from the plan file Claude sent. Full detail lives with your notes.</p>`); },
+  fuelSet: el => { const d = el.dataset.v, k = el.dataset.k; if (k) S.fuel.override[d] = k; else delete S.fuel.override[d]; save(); closeSheet(); render(); },
+  fuelTip: el => { const d = el.dataset.v || today(); openSheet(`<h3>💡 Food tip</h3><div class="card" style="font-size:16px;line-height:1.45">${esc(fuelTip(d))}</div><div class="row-btns"><button class="btn" data-act="fuelTip" data-v="${d}">Another</button><button class="btn primary" data-act="closeSheet">Got it</button></div>`); },
+  morningPlan: () => {
+    const t = today(), ty = dayType(t), nx = upNext(), fl = fuelLine(t), tasks = dayTasks(t), open = tasks.filter(x => x.status === 'open');
+    openSheet(`<h3 id="mp_sheet">☀️ Morning plan</h3>
+<div class="lbl">What kind of day is it?</div><div class="chips">${DAYTYPES.map(([k, l]) => `<button class="chip ${ty === k ? 'on' : ''}" data-act="setDayType" data-v="${k}" data-d="${t}">${l}</button>`).join('')}</div>
+<div class="hint">${ty ? esc(DTN[ty][2]) : 'Pick one — it sets how much goes on today.'}</div>
+${fuelSet() ? `<div class="lbl">Fuel</div><div class="card small">${esc(fl.txt)} <button class="small" style="color:var(--accent-ink)" data-act="fuelTip" data-v="${t}">· 💡 tip</button></div>` : ''}
+<div class="lbl">On today (${open.length} open)</div><div class="list" style="margin-top:6px">${open.length ? open.slice(0, 8).map(x => `<div class="task"><span class="tag tag-${x.tag}">${x.tag}</span><div class="tt"><div class="title">${x.priority ? '★ ' : ''}${esc(x.title)}</div></div></div>`).join('') : '<div class="empty">Nothing yet — add a step below or use a template.</div>'}</div>
+<div class="lbl">Up next from your goals</div><div class="list" style="margin-top:6px">${nx.length ? nx.map(([g, s]) => `<button class="mrow" data-act="fgPick" data-g="${g.id}" data-s="${s.id}" data-v="${t}"><div class="tt"><div class="title">${esc(s.title)}</div><div class="meta">${g.pillars.map(p => pillarById(p)?.icon || '').join('')} ${esc(g.title)}</div></div><span class="chev">＋ Today</span></button>`).join('') : '<div class="empty">No open goal steps.</div>'}</div>
+${S.smoke.quit && S.smoke.quit > t ? `<div class="lbl">Taper</div><div class="card small">Today's cap: <b>${smokeCap(t) ?? '— counting baseline'}</b></div>` : ''}
+<div class="row-btns"><button class="btn" data-act="trainWeek">🗓 Plan training week</button><button class="btn primary" data-act="closeSheet">Let's go</button></div>`);
+  },
+  eveningReview: () => {
+    const t = today(), tasks = dayTasks(t), done = tasks.filter(x => x.status === 'done').length, open = tasks.filter(x => x.status === 'open'), s = S.smoke;
+    openSheet(`<h3 id="ev_sheet">🌙 Evening review</h3>
+<div class="card"><div class="big">${done}<span class="of"> / ${tasks.length} done</span></div>${tasks.length && done === tasks.length ? '<div class="small">Clean sweep. That\'s the standard.</div>' : ''}</div>
+${open.length ? `<div class="lbl">Not done — move or drop</div><div class="list" style="margin-top:6px">${open.map(x => `<div class="task"><span class="tag tag-${x.tag}">${x.tag}</span><div class="tt"><div class="title">${esc(x.title)}</div></div><button class="btn sm" data-act="evMove" data-id="${x.id}">Tomorrow</button><button class="btn sm" data-act="evDrop" data-id="${x.id}">Drop</button></div>`).join('')}</div>` : ''}
+${!s.quit ? '' : t < s.quit ? `<div class="lbl">Taper count today</div><div class="card"><div class="cnt"><button data-act="smokeAdd" data-v="${t}" data-n="-1">−</button><div class="big">${Number(s.log[t] || 0)}${smokeCap(t) != null ? `<span class="of"> / ${smokeCap(t)}</span>` : ''}</div><button data-act="smokeAdd" data-v="${t}" data-n="1">＋</button></div></div>` : `<div class="card small">🚭 Smoke-free: ${smokeFreeDays(t)} day${smokeFreeDays(t) === 1 ? '' : 's'}</div>`}
+<div class="row-btns"><button class="btn" data-act="openJournalDay" data-v="${t}">✍️ Journal (optional)</button><button class="btn primary" data-act="closeSheet">Done</button></div>`);
+  },
+  evMove: el => { const x = S.tasks.find(t => t.id === el.dataset.id); if (!x) return; if (x.recurringId) x.status = 'dropped'; else x.date = addDays(today(), 1); if (x.recurringId) S.tasks.push(normTask({ ...x, id: uid(), status: 'open', recurringId: '', date: addDays(today(), 1) })); save(); ACT.eveningReview(); render(); },
+  evDrop: el => { const x = S.tasks.find(t => t.id === el.dataset.id); if (!x) return; x.status = 'dropped'; save(); ACT.eveningReview(); render(); },
+  trainWeek: el => {
+    const tri = S.templates.filter(x => /^tpl-tri-/.test(x.id));
+    if (!tri.length) { openSheet(`<h3>Plan training week</h3><div class="card empty">The training templates aren't in yet — add Claude's update from the Today page first.</div>`); return; }
+    const t = today(), ws = (el && el.dataset && el.dataset.v) || (dow(t) <= 2 ? weekStart(t) : addDays(weekStart(t), 7));
+    const wi = [...TRI_WORK], oi = [...TRI_OFF]; let rows = '';
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(ws, i), ty = dayType(d), hasT = S.tasks.some(x => x.date === d && x.tag === 'T' && x.status !== 'dropped');
+      const sug = hasT ? '' : ty === 'work' ? (wi.shift() || '') : ty === 'off' ? (oi.shift() || '') : '';
+      rows += `<label>${fmt(d, { weekday: 'short', day: 'numeric' })} · ${ty ? DTN[ty][1] : 'type not set'}${hasT ? ' · already has training' : ''}<select data-tw="${d}"><option value="">— nothing —</option>${tri.map(x => `<option value="${x.id}" ${x.id === sug ? 'selected' : ''}>${esc(x.name.replace(/^Tri base · /, ''))}</option>`).join('')}</select></label>`;
+    }
+    openSheet(`<h3>🗓 Training week · w/c ${fmt(ws, { day: 'numeric', month: 'short' })}</h3><div class="seg" style="margin-top:6px"><button class="${ws === weekStart(t) ? 'on' : ''}" data-act="trainWeek" data-v="${weekStart(t)}">This week</button><button class="${ws !== weekStart(t) ? 'on' : ''}" data-act="trainWeek" data-v="${addDays(weekStart(t), 7)}">Next week</button></div><p class="small muted">Suggested from your day types: work days get the shorter sessions, days off the fuller ones. Change any of them.</p>${rows}<div class="row-btns"><button class="btn primary" data-act="trainWeekSave">Add to calendar</button></div>`);
+  },
+  trainWeekSave: () => { let n = 0; document.querySelectorAll('[data-tw]').forEach(s => { if (!s.value) return; const tp = S.templates.find(x => x.id === s.value); if (tp) n += applyTpl(tp, s.dataset.tw); }); save(); closeSheet(); render(); toast(n + ' sessions added'); }
+};
 
 /* ---------- sheets & forms ---------- */
 /* time input with a clear button (iPhone's time picker has no way to empty a time once set) */
@@ -1059,8 +1188,7 @@ const ACT = {
   },
   fgPick: el => { const g = goalById(el.dataset.g), s = g && findStep(g, el.dataset.s); if (!s) return; addTaskFromStep(g, s, el.dataset.v); closeSheet(); render(); toast('Added'); },
   applyTemplate: el => { const d = el.dataset.v; openSheet(`<h3>Use a template for ${d === today() ? 'today' : fmt(d)}</h3><div class="list">${S.templates.map(t => `<button class="mrow" data-act="tplApply" data-id="${t.id}" data-v="${d}"><div class="tt"><div class="title">${esc(t.name)}</div><div class="meta">${t.items.map(i => i.title).join(' · ')}</div></div></button>`).join('')}</div><p class="small muted">Tasks already on that day are kept. You can edit templates in More → Templates.</p>`); },
-  tplApply: el => { const t = S.templates.find(x => x.id === el.dataset.id), d = el.dataset.v; if (!t) return; const have = new Set(S.tasks.filter(x => x.date === d && x.status !== 'dropped').map(x => x.title.toLowerCase())); let n = 0;
-    t.items.forEach((it, i) => { if (have.has(it.title.toLowerCase())) return; S.tasks.push(normTask({ ...it, id: uid(), date: d, order: i })); n++; }); save(); closeSheet(); render(); toast(n + ' tasks added'); },
+  tplApply: el => { const t = S.templates.find(x => x.id === el.dataset.id), d = el.dataset.v; if (!t) return; const n = applyTpl(t, d); save(); closeSheet(); render(); toast(n + ' tasks added'); },
   editShift: el => { const d = el.dataset.v, s = S.shifts[d] || {}; formSheet({ title: 'Shift · ' + fmt(d), values: { start: s.start || '', end: s.end || '', off: !!s.off }, fields: [{ k: 'start', label: 'Start', type: 'time' }, { k: 'end', label: 'Finish', type: 'time' }, { k: 'off', label: 'Day off', type: 'check' }], onSave: v => { if (!v.start && !v.end && !v.off) delete S.shifts[d]; else S.shifts[d] = v; }, onDelete: s.start || s.off ? () => { delete S.shifts[d]; } : null, deleteLabel: 'Clear' }); },
   shiftWeek: el => { const ws = el.dataset.v || weekStart(today()); let rows = '';
     for (let i = 0; i < 7; i++) { const d = addDays(ws, i), s = S.shifts[d] || {}; rows += `<div class="swrow"><div class="swday"><b>${fmt(d, { weekday: 'short', day: 'numeric' })}</b><label class="check"><input type="checkbox" data-sw="${d}" data-f="off" ${s.off ? 'checked' : ''}> Day off</label><button type="button" class="swclr" data-act="swClear" data-v="${d}">Clear</button></div><div class="two">${timeIn(`data-sw="${d}" data-f="start" aria-label="Start"`, s.start)}${timeIn(`data-sw="${d}" data-f="end" aria-label="Finish"`, s.end)}</div></div>`; }
@@ -1147,7 +1275,7 @@ const ACT = {
   skipUpdate: el => { S.appliedUpdates.push(el.dataset.id); PENDING = PENDING.filter(p => p.id !== el.dataset.id); save(); PENDING.length ? ACT.reviewUpdates() : closeSheet(); render(); }
 };
 let CAP = 'idea';
-Object.assign(ACT, IT_ACTS);
+Object.assign(ACT, IT_ACTS, COACH_ACTS);
 
 function achieve(g) { g.achieved = today(); save(); render(); toast('🏆 Goal achieved — added to Wins'); }
 function slippedSheet() {
@@ -1227,6 +1355,11 @@ function mergeData(d) {
     (d[k] || []).forEach(it => { it = { ...it }; it.id = it.id || uid(); const ix = S[k].findIndex(x => x.id === it.id); if (ix >= 0) { if (it.replace) { delete it.replace; S[k][ix] = it; } return; } delete it.replace;
       if (k === 'tasks') it = normTask(it); if (k === 'recurring') { it.start = it.start || today(); it.days = (it.days || [0, 1, 2, 3, 4, 5, 6]).map(Number); } S[k].push(it); });
   });
+  if (d.settings) { const st = d.settings;
+    if (st.fuel) S.fuel = { ...S.fuel, ...st.fuel, override: S.fuel.override || {} };
+    if (st.smoke) S.smoke = { ...S.smoke, ...st.smoke, log: S.smoke.log || {} };
+    if (st.block) S.block = { ...st.block };
+    if (st.poolLen) S.poolLen = st.poolLen; }
   if (d.shifts) for (const k in d.shifts) S.shifts[k] = d.shifts[k];
   if (d.vision) for (const k in d.vision) {
     if (k === 'quotes') d.vision.quotes.forEach(q => { if (!S.vision.quotes.includes(q)) S.vision.quotes.push(q); });
