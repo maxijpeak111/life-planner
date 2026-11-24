@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.2';
+const VERSION = '2.3';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -901,7 +901,7 @@ function chainOffer(g, s, d) {
   const nx = nextUnplaced(g, s.id);
   if (!nx) { closeSheet(); render(); toast('Added to ' + (d === today() ? 'today' : fmt(d))); return; }
   const off = nextDayOff(d), mon = addDays(weekStart(d), 7);
-  const opts = [off ? ['Next day off', off] : null, ['+2 days', addDays(d, 2)], ['Next Monday', mon]].filter(Boolean);
+  const opts = [['Same day', d], off ? ['Next day off', off] : null, ['+2 days', addDays(d, 2)], ['Next Monday', mon]].filter(Boolean);
   openSheet(`<h3>✓ ${esc(s.title)}</h3><p class="small muted">On ${fmt(d)}. Place the next step too?</p><div class="card"><div class="small muted">Next step · ${esc(g.title)}</div><div style="font-size:17px;font-weight:600;margin-top:4px">${esc(nx.title)}</div></div><div class="chips" style="margin-top:12px">${opts.map(([l, dd]) => `<button class="chip" data-act="chainPlace" data-g="${g.id}" data-s="${nx.id}" data-v="${dd}">${l} · ${fmt(dd, { weekday: 'short', day: 'numeric' })}</button>`).join('')}<button class="chip" data-act="chainPick" data-g="${g.id}" data-s="${nx.id}" data-v="${d}">Pick date…</button></div><div class="row-btns"><button class="btn" data-act="closeSheetRender">Not now</button></div>`);
 }
 /* move a planned goal-step task; later planned steps of the same goal that now clash get pushed back by the same gap */
