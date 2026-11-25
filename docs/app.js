@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.4';
+const VERSION = '2.5';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -348,8 +348,9 @@ function nudges() {
   const lb = S.lastBackup;
   if ((!lb && S.created <= addDays(t, -14)) || (lb && lb <= addDays(t, -30))) out.push({ html: 'Time for a backup of your planner', act: 'exportBackup', go: 'Back up' });
   if (S.vision.letter.text && S.vision.letter.unlock && S.vision.letter.unlock <= t && !S.vision.letter.opened) out.push({ html: '<b>Your letter to future you</b> has unlocked', act: 'moreLetter', go: 'Open' });
-  return out.map(n => `<button class="nudge" data-act="${n.act}" data-v="${n.v || ''}"><span>${n.html}</span><span class="go">${n.go} ›</span></button>`).join('');
+  return out;
 }
+function nudgeList() { return nudges(); }
 function comingUp(from = today()) {
   const t = from, end = addDays(today(), 14), items = [];
   S.goals.forEach(g => { if (!g.archived && !g.achieved && g.deadline && g.deadline >= t && g.deadline <= end) items.push([g.deadline, '⛰ ' + g.title]); });
@@ -361,36 +362,41 @@ function comingUp(from = today()) {
   items.sort((a, b) => (a[2] || a[0]).localeCompare(b[2] || b[0]));
   return items;
 }
+function nextUp(t) {
+  const open = dayTasks(t).filter(x => x.status === 'open').sort((a, b) => (b.priority ? 1 : 0) - (a.priority ? 1 : 0) || sortTasks(a, b));
+  if (open.length) return { task: open[0] };
+  for (const g of activeGoals().filter(g => g.horizon === 'short').concat(activeGoals().filter(g => g.horizon !== 'short'))) { const s = nextStep(g); if (s) return { goal: g, step: s }; }
+  return null;
+}
+function doNextCard(t) {
+  const n = nextUp(t);
+  if (!n) return `<div class="donext empty-dn"><div class="dk">Do this next</div><div class="dt">Nothing planned yet</div><div class="dm">Add a goal step or a template below.</div></div>`;
+  if (n.task) { const x = n.task, g = x.goalId && goalById(x.goalId), meta = [g ? g.title : '', fmtLen(x.length), x.time].filter(Boolean).join(' · ');
+    return `<div class="donext" data-act="editTask" data-id="${x.id}"><button class="bx" data-act="toggleTask" data-id="${x.id}" aria-label="Mark done"></button><div class="tt"><div class="dk">Do this next</div><div class="dt">${esc(x.title)}</div>${meta ? `<div class="dm">${esc(meta)}</div>` : ''}</div></div>`; }
+  return `<button class="donext" data-act="fgPick" data-g="${n.goal.id}" data-s="${n.step.id}" data-v="${t}"><div class="tt"><div class="dk">Next goal step</div><div class="dt">${esc(n.step.title)}</div><div class="dm">${esc(n.goal.title)}${stepDur(n.step) ? ' · ' + esc(stepDur(n.step)) : ''}</div></div><span class="dgo">＋ Today</span></button>`;
+}
+function statusChips(t) {
+  const hs = activeHabits(), hdone = hs.filter(h => habitDone(h.id, t)).length, out = [];
+  out.push(`<button class="schip" data-act="habitSheet" data-v="${t}">✓ Habits ${hdone}/${hs.length}</button>`);
+  const sm = S.smoke;
+  if (sm.quit) { if (t >= sm.quit) { const n = smokeFreeDays(t); out.push(`<button class="schip" data-act="smokeSheet" data-v="${t}">🚭 ${n} day${n === 1 ? '' : 's'} free</button>`); }
+    else { const n = Number(sm.log[t] || 0), cap = smokeCap(t); out.push(`<button class="schip ${cap != null && n > cap ? 'warn' : ''}" data-act="smokeSheet" data-v="${t}">🚭 ${n}${cap != null ? ' / ' + cap + ' cap' : ' today'}</button>`); } }
+  if (fuelSet()) { const { f } = fuelLine(t); out.push(`<button class="schip" data-act="fuelType" data-v="${t}">🥗 ${f.kcal.toLocaleString('en-GB')} kcal</button>`); }
+  const nn = nudgeList().length; if (nn) out.push(`<button class="schip hot" data-act="nudgeSheet">🔔 ${nn} to sort</button>`);
+  return `<div class="schips">${out.join('')}</div>`;
+}
 function renderToday() {
-  const t = today(), ph = phase(), tasks = dayTasks(t);
-  const pri = tasks.filter(x => x.priority), rest = tasks.filter(x => !x.priority);
-  const st = statsRange(t, t);
-  const hs = activeHabits(), hdone = hs.filter(h => habitDone(h.id, t)).length;
-  const best = hs.reduce((m, h) => Math.max(m, streak(h.id)), 0);
-  let ns = null, ng = null;
-  for (const g of activeGoals().filter(g => g.horizon === 'short').concat(activeGoals().filter(g => g.horizon !== 'short'))) { const s = nextStep(g); if (s) { ns = s; ng = g; break; } }
-  const cu = comingUp(addDays(t, 1)); const tomorrowShift = shiftText(addDays(t, 1));
-  const yChange = S.journal[addDays(t, -1)] && S.journal[addDays(t, -1)].change;
-  const sh = shiftText(t);
+  const t = today(), ph = phase(), sh = shiftText(t), hr = new Date().getHours(), h = hr < 5 ? 99 : hr;
   return `<header class="hero ${ph}">${scene(ph)}<div class="hero-top"><div><div class="hello">${greet()}, ${esc(S.name)}</div>
 <div class="hdate">${fmt(t, { weekday: 'long', day: 'numeric', month: 'long' })}${sh ? ' · ' + sh : ''}</div></div>
 <button class="icon-btn" data-act="capture" aria-label="Quick capture">✎</button></div></header>
 <div class="wrap">
-<p class="line">${esc(dailyLine())}</p>
-${S.vision.banner ? `<p class="banner">${esc(S.vision.banner)}</p>` : ''}
-${yChange ? `<p class="line-sub">Yesterday you said: <i>${esc(yChange)}</i></p>` : ''}
-${nudges()}
-${coachToday(t)}
+<p class="qline">${esc(dailyLine())}${S.vision.banner ? `<span class="qban"> · ${esc(S.vision.banner)}</span>` : ''}</p>
+${doNextCard(t)}
 <div class="sect"><span class="grow">Today</span><button data-act="fromGoals" data-v="${t}">＋ Goal step</button><button data-act="applyTemplate" data-v="${t}">Template</button></div>
-${dayBlocks(t)}
-${bodyRows(t)}
-<div class="tiles">
-<button class="tile" data-act="habitSheet" data-v="${t}"><div class="k">Habits · tap to tick</div><div class="v">${hdone}/${hs.length}</div>${best ? `<div class="streak">🔥 ${best} day streak</div>` : ''}</button>
-<button class="tile" data-act="calDay" data-v="${t}"><div class="k">Today's plan</div><div class="v">${st.pct}%</div><div class="bar"><i style="width:${st.pct}%"></i></div></button>
-<button class="tile" ${ng ? `data-act="openGoal" data-id="${ng.id}"` : 'data-act="tab" data-v="goals"'}><div class="k">Next goal step</div><div class="s">${ns ? esc(ns.title) : 'Add a goal to see your next step'}</div></button>
-<button class="tile" data-act="tab" data-v="calendar"><div class="k">Coming up</div><div class="s">${cu.length ? esc(fmt(cu[0][0], { weekday: 'short', day: 'numeric' }) + ' · ' + cu[0][1]) : tomorrowShift ? 'Tomorrow · ' + esc(tomorrowShift) : 'Nothing in the next 2 weeks'}</div></button>
-</div>
-<button class="btn full" style="margin-top:18px" data-act="eveningReview">🌙 Evening review</button>
+${dayBlocks(t, undefined, (nextUp(t) || {}).task ? nextUp(t).task.id : '')}
+${statusChips(t)}
+<button class="btn full coachbtn" data-act="${h < 16 ? 'morningPlan' : 'eveningReview'}">${h < 16 ? '☀️ Morning plan' : '🌙 Evening review'}</button>
 </div>`;
 }
 
@@ -771,9 +777,11 @@ function applyTpl(t, d) {
 }
 const TRI_WORK = ['tpl-tri-w1', 'tpl-tri-w2', 'tpl-tri-w3', 'tpl-tri-w4'], TRI_OFF = ['tpl-tri-o1', 'tpl-tri-o2', 'tpl-tri-o3'];
 const COACH_ACTS = {
+  nudgeSheet: () => { const ns = nudgeList(); openSheet(`<h3>To sort</h3>${ns.length ? ns.map(n => `<button class="nudge" data-act="${n.act}" data-v="${n.v || ''}"><span>${n.html}</span><span class="go">${n.go} ›</span></button>`).join('') : '<div class="card empty">All sorted.</div>'}`); },
+  smokeSheet: el => { const d = (el && el.dataset && el.dataset.v) || today(); openSheet(`<div id="sm_sheet" data-d="${d}"></div>${smokeCard(d)}<div class="row-btns"><button class="btn primary" data-act="closeSheet">Done</button></div>`); },
   setDayType: el => { const d = el.dataset.d || today(), v = el.dataset.v; if (S.dayTypes[d] === v) delete S.dayTypes[d]; else S.dayTypes[d] = v; save(); if ($('#sheet-root').classList.contains('open') && $('#mp_sheet')) ACT.morningPlan(); else render(); },
-  smokeAdd: el => { const d = el.dataset.v, n = Math.max(0, Number(S.smoke.log[d] || 0) + Number(el.dataset.n)); if (n) S.smoke.log[d] = n; else delete S.smoke.log[d]; save(); if ($('#ev_sheet')) ACT.eveningReview(); else render(); },
-  smokeSlip: el => { const d = el.dataset.v; S.smoke.log[d] = Number(S.smoke.log[d] || 0) + 1; save(); render(); toast('Logged. Streak restarts tomorrow — keep going.'); },
+  smokeAdd: el => { const d = el.dataset.v, n = Math.max(0, Number(S.smoke.log[d] || 0) + Number(el.dataset.n)); if (n) S.smoke.log[d] = n; else delete S.smoke.log[d]; save(); if ($('#ev_sheet')) ACT.eveningReview(); else if ($('#sm_sheet')) { ACT.smokeSheet({ dataset: { v: d } }); render(); } else render(); },
+  smokeSlip: el => { const d = el.dataset.v; S.smoke.log[d] = Number(S.smoke.log[d] || 0) + 1; save(); if ($('#sm_sheet')) closeSheet(); render(); toast('Logged. Streak restarts tomorrow — keep going.'); },
   smokeSettings: () => formSheet({ title: 'Smoke-free settings', values: { baseline: S.smoke.baseline || '', quit: S.smoke.quit || '' }, fields: [{ k: 'baseline', label: 'Baseline per day (leave blank to use your counting week)', type: 'number' }, { k: 'quit', label: 'Zero from', type: 'date' }], extra: `<p class="small muted">Taper: ${(S.smoke.steps || []).map(([d, x]) => `${fmt(d, { day: 'numeric', month: 'short' })} → ${Math.round(x * 100)}%`).join(' · ')} of baseline, then zero.</p>`, onSave: v => { S.smoke.baseline = v.baseline || ''; if (v.quit) S.smoke.quit = v.quit; } }),
   fuelType: el => { if (!fuelSet()) return; const d = el.dataset.v, cur = fuelType(d); openSheet(`<h3>Fuel for ${d === today() ? 'today' : fmt(d)}</h3><div class="list">${['rest', 'train', 'big'].map(k => { const f = S.fuel[k]; return `<button class="mrow" data-act="fuelSet" data-v="${d}" data-k="${k}"><div class="tt"><div class="title">${k === cur ? '✓ ' : ''}${FUELN[k]}</div><div class="meta">${f.kcal} kcal · P ${f.p}g · C ${f.c}g · F ${f.f}g</div></div></button>`; }).join('')}<button class="mrow" data-act="fuelSet" data-v="${d}" data-k=""><div class="tt"><div class="title">Automatic</div><div class="meta">Worked out from today's training</div></div></button></div><p class="small muted">Targets come from the plan file Claude sent. Full detail lives with your notes.</p>`); },
   fuelSet: el => { const d = el.dataset.v, k = el.dataset.k; if (k) S.fuel.override[d] = k; else delete S.fuel.override[d]; save(); closeSheet(); render(); },
@@ -781,6 +789,7 @@ const COACH_ACTS = {
   morningPlan: () => {
     const t = today(), ty = dayType(t), nx = upNext(), fl = fuelLine(t), tasks = dayTasks(t), open = tasks.filter(x => x.status === 'open');
     openSheet(`<h3 id="mp_sheet">☀️ Morning plan</h3>
+${S.journal[addDays(t, -1)] && S.journal[addDays(t, -1)].change ? `<p class="line-sub">Yesterday you said: <i>${esc(S.journal[addDays(t, -1)].change)}</i></p>` : ''}
 <div class="lbl">What kind of day is it?</div><div class="chips">${DAYTYPES.map(([k, l]) => `<button class="chip ${ty === k ? 'on' : ''}" data-act="setDayType" data-v="${k}" data-d="${t}">${l}</button>`).join('')}</div>
 <div class="hint">${ty ? esc(DTN[ty][2]) : 'Pick one — it sets how much goes on today.'}</div>
 ${fuelSet() ? `<div class="lbl">Fuel</div><div class="card small">${esc(fl.txt)} <button class="small" style="color:var(--accent-ink)" data-act="fuelTip" data-v="${t}">· 💡 tip</button></div>` : ''}
@@ -886,8 +895,8 @@ function bandHtml(b) {
   const p = b.plan, k = KIND[p.cat || 'social'], pr = p.prep || [];
   return `<div class="band" style="--bc:${k.color}" data-act="editTask" data-id="${p.id}"><div><div class="bk">◆ ${esc(k.name)}${pr.length ? ` · prep ${pr.filter(x => x.done).length}/${pr.length}` : ''}</div><b>${esc(p.title)}</b></div><div class="bt">${p.allDay ? 'All day' : esc((p.time || '') + (p.end ? '–' + p.end : ''))}</div></div>`;
 }
-function dayBlocks(d, emptyMsg = 'Nothing planned yet. Tap ＋, add a goal step or use a template.') {
-  const tasks = dayTasks(d), plans = dayPlans(d), sh = S.shifts[d], out = [];
+function dayBlocks(d, emptyMsg = 'Nothing planned yet. Tap ＋, add a goal step or use a template.', skip = '') {
+  const tasks = dayTasks(d).filter(x => x.id !== skip), plans = dayPlans(d), sh = S.shifts[d], out = [];
   const hourOf = p => p.allDay ? -1 : p.time ? Number(p.time.slice(0, 2)) : 12;
   if (!tasks.length && !plans.length && !(sh && sh.start)) return `<div class="blk"><div class="empty">${emptyMsg}</div></div>`;
   plans.filter(p => p.allDay).forEach(p => out.push(bandHtml({ plan: p })));

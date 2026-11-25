@@ -364,3 +364,19 @@ html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
 .pp-node.hz-mid .pp-dot{border-color:var(--warm)}
 .pp-node.hz-long .pp-dot{border-color:var(--text);background:var(--text)}
 .pp-node .title{font-weight:600}
+/* v2.5 Today: focus list */
+.qline{font-family:var(--serif);font-size:14px;line-height:1.4;color:var(--muted);margin:2px 2px 0}
+.qline .qban{font-family:inherit;color:var(--accent-ink)}
+.donext{display:flex;gap:12px;align-items:center;width:100%;text-align:left;margin-top:12px;padding:14px 16px;border-radius:16px;background:var(--card);border:2px solid var(--accent);cursor:pointer}
+.donext .bx{width:30px;height:30px;border-radius:9px;border:2px solid var(--accent);flex:none}
+.donext .tt{flex:1;min-width:0}
+.donext .dk{font-size:12px;color:var(--accent-ink);font-weight:600}
+.donext .dt{font-size:18px;font-weight:600;margin-top:2px;overflow-wrap:anywhere}
+.donext .dm{font-size:13px;color:var(--muted);margin-top:2px}
+.donext .dgo{color:var(--accent-ink);font-size:14px;white-space:nowrap}
+.donext.empty-dn{border-style:dashed;border-width:1px;border-color:var(--line);cursor:default}
+.schips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.schip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:14px;white-space:nowrap}
+.schip.warn{border-color:var(--danger);color:var(--danger)}
+.schip.hot{background:color-mix(in srgb,var(--warm) 16%,var(--card));border-color:color-mix(in srgb,var(--warm) 45%,var(--line))}
+.coachbtn{margin-top:14px}

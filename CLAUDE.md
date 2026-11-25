@@ -30,5 +30,6 @@ NOTE: the repo is public — keep personal/sensitive details out of updates.json
 ```
 To link existing goals without touching their steps, use `"goalLinks": [ { "id": "g-x", "feeds": ["g-bigger"], "horizon": "mid", "start": "2027-01-01" } ]` in `data` (feeds are added, never removed). Goals form a ladder: steps → short → mid → long; `rollPct()` rolls feeder progress up. Goals may have an optional `start` date.
 To move goals between pillars use `"goalPillars": [ { "id": "g-x", "pillars": ["travel", "life"] } ]` (sets pillars exactly; remembered in `S.goalPillarFix` so it also applies to goals imported later). Goals tab: picking a pillar shows that pillar's path, short → mid → long, each level by date (deadline, else start).
+Today screen (v2.5, focus list): hero → quote line (+ banner) → "Do this next" card (`nextUp()`: top open task, else next goal step) → day blocks (next task skipped) → status chips (habits, taper/smoke-free, fuel, "to sort" nudges in a sheet) → one morning-plan/evening-review button.
 Default pillar ids: physical, ptbiz, money, travel, life, spanish.
 Goal step research must be accurate and sourced (Maxi's rule: no generic or inaccurate info).
