@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.5';
+const VERSION = '2.6';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -385,18 +385,82 @@ function statusChips(t) {
   const nn = nudgeList().length; if (nn) out.push(`<button class="schip hot" data-act="nudgeSheet">🔔 ${nn} to sort</button>`);
   return `<div class="schips">${out.join('')}</div>`;
 }
+/* Today v2.6: hero → quote picked for the day → at-a-glance bar → why today matters → smoke-free → habits (7-day dots) → journal prompt */
+const DAY_LINES = {
+  T: ["Nobody's coming to do the session for you. Lace up.", 'The run you skip is the race you lose later.', "Tired is a feeling. The session still happens.", 'Earn the Half Ironman one boring session at a time.', 'Hard today so race day feels easy.'],
+  S: ["Every unit is a client you'll be ready for.", 'Read it like someone is paying you to know it. Soon they will.', 'Forty focused minutes beats three distracted hours.', "Level 3 doesn't study itself. Open the book."],
+  B: ["Post it before it's perfect.", 'Nobody finds content that never gets made.', "The business you want is built on days like this one. Do the step."],
+  work: ['Do the shift properly. Then do one thing for you.', "Lead the team like it's already your bar.", "Shift days still count. One small step before you go in."],
+  off: ['Day off from work, not from your goals.', 'Big chunks today. This is where the ground gets made up.', "Rest is planned. Drifting isn't."]
+};
+const JPROMPTS = ["What's one thing you did today that future you will thank you for?", 'Where did you take the easy option today, and what would you do differently?', 'What moved you closer to your goals today?', 'What drained your energy today, and what gave it back?', "What's one thing to do better tomorrow?", 'What are you proud of today, however small?', 'Who did you help or learn from today?'];
+function daySeed(d) { return Math.floor(pd(d).getTime() / 864e5); }
+function dayQuote(d) {
+  const ts = dayTasks(d), cnt = {}; ts.forEach(t => { if (DAY_LINES[t.tag]) cnt[t.tag] = (cnt[t.tag] || 0) + 1; });
+  const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+  const dt = dayType(d), n = daySeed(d), own = S.vision.quotes || [];
+  let pool = top ? DAY_LINES[top] : DAY_LINES[dt] || LINES;
+  if (top && dt && n % 3 === 0) pool = DAY_LINES[dt] || pool;
+  if (own.length && n % 4 === 1) pool = own;
+  return pool[n % pool.length];
+}
+function glanceBar(t) {
+  const tasks = dayTasks(t), plans = dayPlans(t), sh = S.shifts[t], done = tasks.filter(x => x.status === 'done').length;
+  let segs;
+  if (sh && sh.start && !sh.off) {
+    const after = x => x.slot === 'eve' || (x.time && x.time >= sh.start);
+    const b = tasks.filter(x => !after(x)).length, a = tasks.filter(after).length;
+    segs = `<span class="gs pre">Before · ${b}</span><span class="gs shift">Shift ${esc(sh.start)}–${esc(sh.end || '?')}</span><span class="gs post">After · ${a}</span>`;
+  } else {
+    const c = k => tasks.filter(x => (x.slot || 'any') === k || (k === 'any' && !SLOT_ORDER.hasOwnProperty(x.slot))).length;
+    segs = `<span class="gs pre">Morning · ${c('am')}</span><span class="gs mid">Afternoon · ${c('pm')}</span><span class="gs post">Evening · ${c('eve') + c('any')}</span>`;
+  }
+  const ev = plans[0];
+  const evTxt = ev ? (ev.allDay ? '' : (ev.time ? ev.time + ' ' : '')) + ev.title + (plans.length > 1 ? ` +${plans.length - 1}` : '') : (sh && sh.off ? 'Day off' : '');
+  return `<button class="glance" data-act="calDay" data-v="${t}"><div class="gk">Today at a glance</div><div class="gbar">${segs}</div>
+<div class="gmeta"><span>✓ ${done} of ${tasks.length} task${tasks.length === 1 ? '' : 's'}</span>${evTxt ? `<span class="gev">◆ ${esc(evTxt)}</span>` : ''}</div></button>`;
+}
+function whyLines(t) {
+  const ts = dayTasks(t).filter(x => x.goalId && goalById(x.goalId)).sort((a, b) => (a.status === 'done') - (b.status === 'done') || (b.priority ? 1 : 0) - (a.priority ? 1 : 0) || sortTasks(a, b)).slice(0, 3);
+  if (!ts.length) return '';
+  return `<div class="sect">Why today matters</div><div class="why card">${ts.map(x => {
+    const g = goalById(x.goalId), st = x.stepId && findStep(g, x.stepId), top = ladderUp(g).slice(-1)[0];
+    const why = st && st.why ? st.why : top ? `Gets you towards ${g.title}, then ${top.title}` : g.why ? g.why : `Gets you towards ${g.title}`;
+    return `<button class="wrow ${x.status === 'done' ? 'done' : ''}" data-act="editTask" data-id="${x.id}"><div class="wt">${esc(x.title)}</div><div class="wy">${esc(why)}</div></button>`; }).join('')}</div>`;
+}
+function smokeLine(t) {
+  const sm = S.smoke, quit = sm.quit || '2027-01-01';
+  const txt = t >= quit ? (() => { const n = sm.quit ? smokeFreeDays(t) : Math.round((pd(t) - pd(quit)) / 864e5) + 1; return `<b>${n} day${n === 1 ? '' : 's'}</b> smoke-free`; })()
+    : (() => { const n = Math.round((pd(quit) - pd(t)) / 864e5); return `Starts ${fmt(quit, { day: 'numeric', month: 'short' })} · ${n} day${n === 1 ? '' : 's'} to go`; })();
+  return `<button class="smline" data-act="smokeSheet" data-v="${t}"><span>🚭 Smoke-free</span><span class="muted">${txt}</span></button>`;
+}
+function habitTile(t) {
+  const hs = activeHabits();
+  if (!hs.length) return `<div class="sect">Habits</div><button class="card empty" style="width:100%" data-act="moreGo" data-v="habits">Add your daily habits</button>`;
+  const days = [...Array(7)].map((_, i) => addDays(t, i - 6));
+  return `<div class="sect"><span class="grow">Habits</span><button data-act="moreGo" data-v="habits">Edit</button></div><div class="htile card">${hs.map(h => {
+    const on = habitDone(h.id, t), n = streak(h.id);
+    return `<div class="hrow2"><button class="hc ${on ? 'on' : ''}" data-act="toggleHabit" data-id="${h.id}" data-v="${t}" aria-label="${on ? 'Untick' : 'Tick'} ${esc(h.name)}">${on ? '✓' : ''}</button><span class="hn">${esc(h.name)}</span><span class="hd">${days.map(d => `<i class="${habitDone(h.id, d) ? 'on' : ''}"></i>`).join('')}</span><span class="hs ${n ? '' : 'none'}">${n ? '🔥 ' + n : '–'}</span></div>`; }).join('')}</div>`;
+}
+function journalPrompt(t) {
+  const j = S.journal[t], wrote = j && Object.values(j).some(v => typeof v === 'string' ? v.trim() : v && typeof v === 'object' && Object.values(v).some(x => typeof x === 'string' && x.trim()));
+  return `<button class="card jprompt" data-act="openJournalDay" data-v="${t}"><div class="jp">${esc(JPROMPTS[daySeed(t) % JPROMPTS.length])}</div><div class="jgo">${wrote ? 'Open today\'s entry ›' : 'Write tonight\'s entry ›'}</div></button>`;
+}
 function renderToday() {
-  const t = today(), ph = phase(), sh = shiftText(t), hr = new Date().getHours(), h = hr < 5 ? 99 : hr;
+  const t = today(), ph = phase(), sh = shiftText(t);
+  const upd = PENDING.length ? `<button class="nudge" data-act="reviewUpdates"><span><b>${PENDING.length} update${PENDING.length > 1 ? 's' : ''} from Claude</b> ready to add</span><span class="go">View ›</span></button>` : '';
   return `<header class="hero ${ph}">${scene(ph)}<div class="hero-top"><div><div class="hello">${greet()}, ${esc(S.name)}</div>
 <div class="hdate">${fmt(t, { weekday: 'long', day: 'numeric', month: 'long' })}${sh ? ' · ' + sh : ''}</div></div>
 <button class="icon-btn" data-act="capture" aria-label="Quick capture">✎</button></div></header>
 <div class="wrap">
-<p class="qline">${esc(dailyLine())}${S.vision.banner ? `<span class="qban"> · ${esc(S.vision.banner)}</span>` : ''}</p>
-${doNextCard(t)}
-<div class="sect"><span class="grow">Today</span><button data-act="fromGoals" data-v="${t}">＋ Goal step</button><button data-act="applyTemplate" data-v="${t}">Template</button></div>
-${dayBlocks(t, undefined, (nextUp(t) || {}).task ? nextUp(t).task.id : '')}
-${statusChips(t)}
-<button class="btn full coachbtn" data-act="${h < 16 ? 'morningPlan' : 'eveningReview'}">${h < 16 ? '☀️ Morning plan' : '🌙 Evening review'}</button>
+<p class="qline">${esc(dayQuote(t))}${S.vision.banner ? `<span class="qban"> · ${esc(S.vision.banner)}</span>` : ''}</p>
+${upd}
+${glanceBar(t)}
+${whyLines(t)}
+${smokeLine(t)}
+${habitTile(t)}
+<div class="sect">Tonight</div>
+${journalPrompt(t)}
 </div>`;
 }
 

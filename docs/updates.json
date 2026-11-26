@@ -1,124 +1,153 @@
 {
- "updates": [
-  {
-   "id": "2026-11-24-goal-pillars",
-   "title": "Goals moved onto your chosen pillars",
-   "description": "Sets which pillars each goal shows on. Nothing else changes.",
-   "data": {
-    "goalPillars": [
-     {
-      "id": "g-sub45",
-      "pillars": [
-       "physical"
-      ]
-     },
-     {
-      "id": "g-marathon",
-      "pillars": [
-       "physical"
-      ]
-     },
-     {
-      "id": "g-fight",
-      "pillars": [
-       "physical"
-      ]
-     },
-     {
-      "id": "g-ironman",
-      "pillars": [
-       "physical"
-      ]
-     },
-     {
-      "id": "g-compete",
-      "pillars": [
-       "physical"
-      ]
-     },
-     {
-      "id": "g-quals",
-      "pillars": [
-       "ptbiz"
-      ]
-     },
-     {
-      "id": "g-clients",
-      "pillars": [
-       "ptbiz",
-       "money"
-      ]
-     },
-     {
-      "id": "g-brand",
-      "pillars": [
-       "ptbiz",
-       "money"
-      ]
-     },
-     {
-      "id": "g-coach",
-      "pillars": [
-       "ptbiz"
-      ]
-     },
-     {
-      "id": "g-job",
-      "pillars": [
-       "money"
-      ]
-     },
-     {
-      "id": "g-savings",
-      "pillars": [
-       "money",
-       "travel"
-      ]
-     },
-     {
-      "id": "g-freedom",
-      "pillars": [
-       "money",
-       "life"
-      ]
-     },
-     {
-      "id": "g-firsttrip",
-      "pillars": [
-       "travel",
-       "life"
-      ]
-     },
-     {
-      "id": "g-europe",
-      "pillars": [
-       "travel",
-       "life"
-      ]
-     },
-     {
-      "id": "g-canada",
-      "pillars": [
-       "travel",
-       "life"
-      ]
-     },
-     {
-      "id": "g-nature",
-      "pillars": [
-       "travel",
-       "life"
-      ]
-     },
-     {
-      "id": "g-spanish",
-      "pillars": [
-       "spanish",
-       "travel"
-      ]
-     }
-    ]
-   }
-  }
- ]
+  "updates": [
+    {
+      "id": "2026-11-24-goal-pillars",
+      "title": "Goals moved onto your chosen pillars",
+      "description": "Sets which pillars each goal shows on. Nothing else changes.",
+      "data": {
+        "goalPillars": [
+          {
+            "id": "g-sub45",
+            "pillars": [
+              "physical"
+            ]
+          },
+          {
+            "id": "g-marathon",
+            "pillars": [
+              "physical"
+            ]
+          },
+          {
+            "id": "g-fight",
+            "pillars": [
+              "physical"
+            ]
+          },
+          {
+            "id": "g-ironman",
+            "pillars": [
+              "physical"
+            ]
+          },
+          {
+            "id": "g-compete",
+            "pillars": [
+              "physical"
+            ]
+          },
+          {
+            "id": "g-quals",
+            "pillars": [
+              "ptbiz"
+            ]
+          },
+          {
+            "id": "g-clients",
+            "pillars": [
+              "ptbiz",
+              "money"
+            ]
+          },
+          {
+            "id": "g-brand",
+            "pillars": [
+              "ptbiz",
+              "money"
+            ]
+          },
+          {
+            "id": "g-coach",
+            "pillars": [
+              "ptbiz"
+            ]
+          },
+          {
+            "id": "g-job",
+            "pillars": [
+              "money"
+            ]
+          },
+          {
+            "id": "g-savings",
+            "pillars": [
+              "money",
+              "travel"
+            ]
+          },
+          {
+            "id": "g-freedom",
+            "pillars": [
+              "money",
+              "life"
+            ]
+          },
+          {
+            "id": "g-firsttrip",
+            "pillars": [
+              "travel",
+              "life"
+            ]
+          },
+          {
+            "id": "g-europe",
+            "pillars": [
+              "travel",
+              "life"
+            ]
+          },
+          {
+            "id": "g-canada",
+            "pillars": [
+              "travel",
+              "life"
+            ]
+          },
+          {
+            "id": "g-nature",
+            "pillars": [
+              "travel",
+              "life"
+            ]
+          },
+          {
+            "id": "g-spanish",
+            "pillars": [
+              "spanish",
+              "travel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "2026-11-26-habits",
+      "title": "Your daily habits",
+      "description": "Adds Healthy eating, Reading, Meditation and Tidy living area to your Habits tile on Today (your AM/PM stretch stay as they are).",
+      "data": {
+        "habits": [
+          {
+            "id": "h-eat",
+            "name": "Healthy eating",
+            "active": true
+          },
+          {
+            "id": "h-read",
+            "name": "Reading",
+            "active": true
+          },
+          {
+            "id": "h-med",
+            "name": "Meditation",
+            "active": true
+          },
+          {
+            "id": "h-tidy",
+            "name": "Tidy living area",
+            "active": true
+          }
+        ]
+      }
+    }
+  ]
 }
