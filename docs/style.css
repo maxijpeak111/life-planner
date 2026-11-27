@@ -418,3 +418,7 @@ html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
 .hfold .chev{font-size:12px}
 button.card.ym{display:block;width:100%;text-align:left;color:inherit;font:inherit}
 .meta.warn{color:#b26b3a}
+
+.mv{background:var(--card2,#f3efe8);border:0;border-radius:8px;width:30px;height:30px;font-size:15px;color:inherit;flex:none}
+.mvs{display:flex;gap:4px;margin-right:6px}
+.phase-h .mv{margin-right:4px}

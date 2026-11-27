@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.9.1';
+const VERSION = '2.10';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -445,6 +445,7 @@ function habitTile(t) {
     const on = habitDone(h.id, t), n = streak(h.id);
     return `<div class="hrow2"><button class="hc ${on ? 'on' : ''}" data-act="toggleHabit" data-id="${h.id}" data-v="${t}" aria-label="${on ? 'Untick' : 'Tick'} ${esc(h.name)}">${on ? '✓' : ''}</button><span class="hn">${esc(h.name)}</span><span class="hd">${days.map(d => `<i class="${habitDone(h.id, d) ? 'on' : ''}"></i>`).join('')}</span><span class="hs ${n ? '' : 'none'}">${n ? '🔥 ' + n : '–'}</span></div>`; }).join('')}</div>`;
 }
+function keepOpen() { V.editOpen = true; }
 function habitsClosed() { try { return localStorage.getItem('lifeplanner.ui.habitsClosed') === '1'; } catch (e) { return false; } }
 function journalPrompt(t) {
   const j = S.journal[t], wrote = j && Object.values(j).some(v => typeof v === 'string' ? v.trim() : v && typeof v === 'object' && Object.values(v).some(x => typeof x === 'string' && x.trim()));
@@ -537,6 +538,7 @@ function renderGoals() {
   const G = V.goals;
   let list = S.goals.filter(g => G.archived ? (g.archived || g.achieved) : (!g.archived && !g.achieved && g.horizon === G.h));
   if (G.p !== 'all') list = list.filter(g => g.pillars.includes(G.p));
+  list.sort((a, b) => (goalDate(a) || '9999').localeCompare(goalDate(b) || '9999') || a.title.localeCompare(b.title));
   let h = `<div class="page-top"><h2>Goals</h2><button class="btn sm" data-act="newGoal">＋ Goal</button></div><div class="wrap" style="padding-top:4px">
 <div class="seg">${[['path', '🧭 Path'], ['short', 'Short'], ['mid', 'Mid'], ['long', 'Long']].map(([k, l]) => `<button class="${!G.archived && G.h === k ? 'on' : ''}" data-act="goalH" data-v="${k}">${l}</button>`).join('')}</div>
 <div class="chips scroll" style="margin-top:10px"><button class="chip ${G.p === 'all' ? 'on' : ''}" data-act="goalP" data-v="all">All</button>${S.pillars.map(p => `<button class="chip ${G.p === p.id ? 'on' : ''}" data-act="goalP" data-v="${p.id}">${p.icon} ${esc(p.name)}</button>`).join('')}<button class="chip" data-act="managePillars">⚙︎ Pillars</button></div>`;
@@ -618,11 +620,11 @@ ${g.why ? `<div class="sect">Why</div><div class="card para">${esc(g.why)}</div>
 ${g.research ? `<div class="sect">Research summary</div><div class="card para">${esc(g.research)}</div>` : ''}
 ${g.sources ? `<div class="sect">Sources</div><div class="card para small">${linkify(g.sources)}</div>` : ''}
 ${g.archived ? `<div class="sect">Archived ${g.archivedOn ? fmt(g.archivedOn) : ''}</div><div class="card para">${esc(g.archiveNote || 'No note')}</div>` : ''}`;
-  h += `<details class="grp editsteps"><summary>Edit phases &amp; steps</summary>`;
+  h += `<details class="grp editsteps"${V.editOpen ? ' open' : ''}><summary>Edit phases &amp; steps</summary>`;
   g.phases.forEach(p => {
     const done = p.steps.filter(s => s.status === 'done').length;
-    h += `<div class="phase"><div class="phase-h"><span class="grow">${esc(p.name)}</span><span class="small muted">${done}/${p.steps.length}</span><button class="btn sm" data-act="editPhase" data-g="${g.id}" data-p="${p.id}">Edit</button></div>
-<div class="list">${p.steps.map(s => `<div class="step" data-act="editStep" data-g="${g.id}" data-s="${s.id}"><button class="st ${s.status}" data-act="cycleStep" data-g="${g.id}" data-s="${s.id}">${STN[s.status]}</button><div class="tt"><div class="title">${esc(s.title)}</div>${s.why ? `<div class="why">${esc(s.why)}</div>` : ''}${s.source ? `<div class="why">Source: ${esc(s.source)}</div>` : ''}</div><button class="btn sm" data-act="stepToDay" data-g="${g.id}" data-s="${s.id}">＋ Day</button></div>`).join('') || '<div class="empty">No steps yet</div>'}</div>
+    h += `<div class="phase"><div class="phase-h"><span class="grow">${esc(p.name)}</span><span class="small muted">${done}/${p.steps.length}</span><button class="mv" data-act="phaseMove" data-g="${g.id}" data-p="${p.id}" data-v="-1" aria-label="Move phase up">↑</button><button class="mv" data-act="phaseMove" data-g="${g.id}" data-p="${p.id}" data-v="1" aria-label="Move phase down">↓</button><button class="btn sm" data-act="editPhase" data-g="${g.id}" data-p="${p.id}">Edit</button></div>
+<div class="list">${p.steps.map(s => `<div class="step" data-act="editStep" data-g="${g.id}" data-s="${s.id}"><button class="st ${s.status}" data-act="cycleStep" data-g="${g.id}" data-s="${s.id}">${STN[s.status]}</button><div class="tt"><div class="title">${esc(s.title)}</div>${s.why ? `<div class="why">${esc(s.why)}</div>` : ''}${s.source ? `<div class="why">Source: ${esc(s.source)}</div>` : ''}</div><span class="mvs"><button class="mv" data-act="stepOrder" data-g="${g.id}" data-s="${s.id}" data-v="-1" aria-label="Move step up">↑</button><button class="mv" data-act="stepOrder" data-g="${g.id}" data-s="${s.id}" data-v="1" aria-label="Move step down">↓</button></span><button class="btn sm" data-act="stepToDay" data-g="${g.id}" data-s="${s.id}">＋ Day</button></div>`).join('') || '<div class="empty">No steps yet</div>'}</div>
 <button class="btn sm" style="margin-top:8px" data-act="addStep" data-g="${g.id}" data-p="${p.id}">＋ Step</button></div>`;
   });
   const linked = S.tasks.filter(t => t.goalId === g.id && t.status !== 'dropped').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
@@ -1501,7 +1503,7 @@ const ACT = {
   goalH: el => { V.goals.h = el.dataset.v; V.goals.archived = false; render(); },
   goalP: el => { V.goals.p = el.dataset.v; render(); },
   goalArchived: () => { V.goals.archived = !V.goals.archived; render(); },
-  openGoal: el => nav(() => { V.goals.id = el.dataset.id; V.tab = 'goals'; }),
+  openGoal: el => nav(() => { V.goals.id = el.dataset.id; V.editOpen = false; V.tab = 'goals'; }),
   goalBack: () => { V.goals.id = null; render(); },
   newGoal: () => goalForm(null),
   linkUp: el => linkSheet(goalById(el.dataset.id), 'up'),
@@ -1513,6 +1515,13 @@ const ACT = {
   addPhase: el => { const g = goalById(el.dataset.g); const n = g.phases.length; formSheet({ title: 'New phase', values: { name: 'Phase ' + String.fromCharCode(65 + n) + ' — ' }, fields: [{ k: 'name', label: 'Phase name' }], onSave: v => { g.phases.push({ id: uid(), name: v.name || 'Phase', steps: [] }); } }); },
   editPhase: el => { const g = goalById(el.dataset.g), p = g.phases.find(x => x.id === el.dataset.p); formSheet({ title: 'Edit phase', values: p, fields: [{ k: 'name', label: 'Phase name' }], onSave: v => { p.name = v.name; }, onDelete: () => { g.phases = g.phases.filter(x => x !== p); } }); },
   addStep: el => { const g = goalById(el.dataset.g), p = g.phases.find(x => x.id === el.dataset.p); stepForm(g, p, null); },
+  stepOrder: el => { const g = goalById(el.dataset.g); if (!g) return; const dir = +el.dataset.v, all = g.phases.flatMap(p => p.steps.map(x => [p, x]));
+    const i = all.findIndex(([, x]) => x.id === el.dataset.s); if (i < 0) return; const [p, st] = all[i], arr = p.steps, k = arr.indexOf(st), j = k + dir;
+    if (j >= 0 && j < arr.length) { arr.splice(k, 1); arr.splice(j, 0, st); }
+    else { const pi = g.phases.indexOf(p), np = g.phases[pi + dir]; if (!np) return; arr.splice(k, 1); if (dir < 0) np.steps.push(st); else np.steps.unshift(st); toast('Moved to ' + np.name); }
+    save(); keepOpen(); render(); },
+  phaseMove: el => { const g = goalById(el.dataset.g); if (!g) return; const i = g.phases.findIndex(p => p.id === el.dataset.p), j = i + +el.dataset.v; if (i < 0 || j < 0 || j >= g.phases.length) return;
+    const [p] = g.phases.splice(i, 1); g.phases.splice(j, 0, p); save(); keepOpen(); render(); },
   editStep: el => { const g = goalById(el.dataset.g); const p = g.phases.find(x => x.steps.some(s => s.id === el.dataset.s)); stepForm(g, p, findStep(g, el.dataset.s)); },
   cycleStep: el => { const g = goalById(el.dataset.g), s = findStep(g, el.dataset.s); setStepStatus(g, s, { todo: 'doing', doing: 'done', done: 'todo' }[s.status]); save(); render();
     if (s.status === 'done' && allSteps(g).every(x => x.status === 'done') && !g.achieved) toast('Every step is done', 'Mark goal achieved', () => achieve(g)); },

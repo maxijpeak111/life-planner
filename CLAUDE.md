@@ -36,5 +36,6 @@ Extra ops: `"goalAddSteps": [ { "id" | "match": "title regex", "phase": { "id", 
 Milestone steps start with 🏁, never ✓ (a tick in a title reads as done). Level 2 is NOT finished: filming the session assignment is the next big step (Nov 2026).
 Link picker (v2.8): lists every active goal at that level or bigger, grouped Linked now / Same pillar / Other goals.
 v2.9: Habits tile on Today folds (UI-only key `lifeplanner.ui.habitsClosed`). Calendar: year month cards open that month; month view lists goal deadlines/timeline/wins/trips (`monthItems`) under the grid. Goals → Path (all) is time-ordered: Short → Mid → Long, each by date, with '↓ builds:' lines (Maxi: short at top, build down).
+v2.10: ↑↓ buttons reorder steps (crossing into the next/previous phase at the ends) and phases inside "Edit phases & steps"; Short/Mid/Long goal lists sort by date (deadline, else start), undated last.
 Default pillar ids: physical, ptbiz, money, travel, life, spanish.
 Goal step research must be accurate and sourced (Maxi's rule: no generic or inaccurate info).
