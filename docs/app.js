@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '3.1';
+const VERSION = '3.2';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -471,6 +471,7 @@ function weekRepeats(ws) {
   return S.recurring.filter(r => r.mode === 'week' && !r.paused).map(r => { const ts = S.tasks.filter(t => t.recurringId === r.id && t.date >= ws && t.date <= we && t.status !== 'dropped');
     return { r, placed: ts.length, done: ts.filter(t => t.status === 'done').length, left: Math.max(0, (r.perWeek || 1) - ts.length) }; });
 }
+function weekRepDays(r, ws) { const we = addDays(ws, 6); return S.tasks.filter(t => t.recurringId === r.id && t.date >= ws && t.date <= we && t.status !== 'dropped').sort((a, b) => a.date.localeCompare(b.date)).map(t => (t.status === 'done' ? '✓ ' : '📅 ') + fmt(t.date, { weekday: 'short', day: 'numeric' })).join(', '); }
 function nextFreeDay(from) { for (let i = 0; i < 14; i++) { const d = addDays(from, i), sh = S.shifts[d]; if (!sh || sh.off || !sh.start) return d; } return from; }
 let ROLLED = '';
 function rollRepeats() {
@@ -480,7 +481,7 @@ function rollRepeats() {
 }
 function repeatRows(ws) {
   const wr = weekRepeats(ws); if (!wr.length) return '';
-  return `<div class="list">${wr.map(({ r, placed, done, left }) => `<div class="mrow"><span class="tag tag-${r.tag}">${r.tag}</span><div class="tt" data-act="recEdit" data-id="${r.id}"><div class="title">${esc(r.title)}</div><div class="meta">${placed}/${r.perWeek} placed${done ? ' · ' + done + ' done' : ''}${r.length ? ' · ' + fmtLen(r.length) : ''}</div></div>${left ? `<button class="btn sm" data-act="repPlace" data-id="${r.id}" data-v="${ws}">＋ Place</button>` : '<span class="small muted">✓ placed</span>'}</div>`).join('')}</div>`;
+  return `<div class="list">${wr.map(({ r, placed, done, left }) => `<div class="mrow"><span class="tag tag-${r.tag}">${r.tag}</span><div class="tt" data-act="recEdit" data-id="${r.id}"><div class="title">${esc(r.title)}</div><div class="meta">${placed ? weekRepDays(r, ws) : 'Not placed yet'} · ${placed}/${r.perWeek} a week${r.length ? ' · ' + fmtLen(r.length) : ''}</div></div>${left ? `<button class="btn sm" data-act="repPlace" data-id="${r.id}" data-v="${ws}">＋ Place${r.perWeek > 1 ? ' ' + (placed + 1) : ''}</button>` : '<span class="small" style="color:var(--accent-ink)">✓ All placed</span>'}</div>`).join('')}</div>`;
 }
 function repeatsPage() {
   let h = moreTop('↻ Repeating tasks', `<button class="btn sm" data-act="recAdd">＋ New</button>`);
@@ -816,10 +817,8 @@ function visionPage() {
 }
 function vField(k, label, rows) { return `<label style="display:block;margin-top:14px"><span class="small muted">${label}</span><textarea rows="${rows}" data-vis="${k}" style="margin-top:5px;font-family:var(--serif)">${esc(S.vision[k])}</textarea></label>`; }
 function templatesPage() {
-  let h = moreTop('🧩 Templates & repeats');
+  let h = moreTop('🧩 Day templates') + `<div class="card small para">A day template is a ready-made list of tasks for a type of day, like "Work day" or "Day off". On any day in the Calendar, tap <b>Template</b> and the whole list drops onto that day in one go, so you don't add the same things one by one. Repeating tasks now live in More → Repeating tasks.</div>`;
   h += `<div class="sect"><span class="grow">Day templates</span><button data-act="tplAdd">＋ New</button></div><div class="list">${S.templates.map(t => `<button class="mrow" data-act="tplEdit" data-id="${t.id}"><div class="tt"><div class="title">${esc(t.name)}</div><div class="meta">${t.items.length} tasks</div></div><span class="chev">›</span></button>`).join('')}</div>`;
-  h += `<div class="sect"><span class="grow">Repeating tasks</span><button data-act="recAdd">＋ New</button></div>`;
-  h += S.recurring.length ? `<div class="list">${S.recurring.map(r => `<button class="mrow" data-act="recEdit" data-id="${r.id}"><span class="tag tag-${r.tag}">${r.tag}</span><div class="tt"><div class="title">${esc(r.title)}${r.paused ? ' (paused)' : ''}</div><div class="meta">${r.days.length === 7 ? 'Every day' : r.days.map(d => DOW[d]).join(', ')} · ${SLOTN[r.slot]}${r.length ? ' · ' + fmtLen(r.length) : ''}</div></div><span class="chev">›</span></button>`).join('')}</div>` : '<div class="card empty">Tasks that should appear on set days (e.g. Spanish 10 min every day).</div>';
   return h + '</div>';
 }
 function appsPage() {
@@ -1494,7 +1493,7 @@ const ACT = {
   planWeek: el => { const v = +el.dataset.v; V.planWeek = v ? addDays(V.planWeek || weekStart(today()), v) : weekStart(today()); render(); },
   planAll: () => { V.planAll = true; render(); },
   repPlace: el => { const r = S.recurring.find(x => x.id === el.dataset.id); if (!r) return; const ws = el.dataset.v || weekStart(today()), t = today();
-    pickDateSheet('Place “' + r.title + '” on…', d => { S.tasks.push(normTask({ title: r.title, tag: r.tag, slot: r.slot, length: r.length, time: r.time || '', app: r.app || '', date: d, recurringId: r.id })); save(); closeSheet(); render(); toast('Placed on ' + fmt(d)); }, nextFreeDay(ws > t ? ws : t)); },
+    pickDateSheet('Place “' + r.title + '” on…', d => { S.tasks.push(normTask({ title: r.title, tag: r.tag, slot: r.slot, length: r.length, time: r.time || '', app: r.app || '', date: d, recurringId: r.id })); save(); closeSheet(); render(); const w2 = weekStart(d); toast('Placed on ' + fmt(d, { weekday: 'short', day: 'numeric', month: 'short' }) + (w2 !== weekStart(today()) ? ' · counts for the week of ' + fmt(w2, { day: 'numeric', month: 'short' }) : '')); }, nextFreeDay(ws > t ? ws : t)); },
   focusToggle: el => { const id = el.dataset.id, i = S.focus.indexOf(id); if (i >= 0) S.focus.splice(i, 1); else { if (S.focus.length >= 3) { toast('3 focus goals max — remove one first'); return; } S.focus.push(id); } save(); render(); },
   focusPick: () => { const act = activeGoals().sort((a, b) => (goalDate(a) || '9999').localeCompare(goalDate(b) || '9999'));
     openSheet(`<h3>Focus goals</h3><p class="small muted">Pick up to 3. Their next steps go to the top of Up next.</p><div class="list">${act.map(g => `<button class="mrow" data-act="focusSheetTog" data-id="${g.id}"><span class="ic">${S.focus.includes(g.id) ? '★' : '☆'}</span><div class="tt"><div class="title">${esc(g.title)}</div><div class="meta">${HZN[g.horizon]} term</div></div></button>`).join('')}</div><div class="row-btns"><button class="btn primary" data-act="closeSheetRender">Done</button></div>`); },
@@ -1719,7 +1718,7 @@ function tplForm(t) {
     onDelete: t ? () => { S.templates = S.templates.filter(x => x !== t); } : null });
 }
 function recForm(r) {
-  formSheet({ title: r ? 'Repeating task' : 'New repeating task', values: r ? { mode: 'days', perWeek: 2, ...r, days: (r.days || []).map(String) } : { tag: 'P', slot: 'any', mode: 'week', perWeek: 2, days: [] },
+  formSheet({ title: r ? 'Repeating task' : 'New repeating task', values: r ? { mode: 'days', perWeek: 2, ...r, days: (r.days || []).map(String) } : { tag: 'P', slot: 'any', mode: 'week', perWeek: 1, days: [] },
     fields: [{ k: 'title', label: 'Task' }, { k: 'mode', label: 'How it repeats', type: 'select', options: [{ v: 'week', l: 'X times a week — I place them' }, { v: 'days', l: 'Fixed days — added automatically' }] }, { k: 'perWeek', label: 'Times a week (for X times a week)', type: 'number' }, { k: 'days', label: 'Days (for fixed days)', type: 'multi', options: DOW.map((d, i) => ({ v: String(i), l: d })) }, { k: 'tag', label: 'Type', type: 'select', options: TAGS.map(k => ({ v: k, l: k + ' · ' + TAGN[k] })) }, { k: 'slot', label: 'Time of day', type: 'select', options: SLOTS.map(([v, l]) => ({ v, l })) }, { k: 'length', label: 'Rough time in minutes', type: 'number' }, { k: 'app', label: 'Open an app (optional)', type: 'select', options: [{ v: '', l: '—' }, ...S.apps.map(a => ({ v: a.name, l: a.name }))] }, { k: 'paused', label: 'Paused', type: 'check' }],
     onSave: v => { if (!v.title.trim()) return false; v.perWeek = Math.max(1, Math.min(7, +v.perWeek || 1)); const days = (v.days || []).map(Number).sort(); if (v.mode === 'days' && !days.length) { toast('Pick the days'); return false; } if (r) { Object.assign(r, v, { days }); S.tasks.forEach(t => { if (t.recurringId === r.id && t.date >= today() && t.status === 'open') Object.assign(t, { title: r.title, tag: r.tag, slot: r.slot, length: r.length, app: r.app }); }); } else S.recurring.push({ id: uid(), ...v, days, start: today() }); },
     onDelete: r ? () => { S.recurring = S.recurring.filter(x => x !== r); S.tasks = S.tasks.filter(t => !(t.recurringId === r.id && t.date >= today() && t.status === 'open')); } : null });
@@ -1768,7 +1767,8 @@ function mergeData(d) {
   /* goalLinks: patch links/timeframe on existing goals without touching their steps */
   (d.goalLinks || []).forEach(p => { const g = p.id ? goalById(p.id) : findGoalByMatch(p.match); if (!g) return; if (p.feeds) p.feeds.forEach(f => { if (f !== g.id && !g.feeds.includes(f)) g.feeds.push(f); }); if (p.horizon) g.horizon = p.horizon; if (p.start && !g.start) g.start = p.start; if (p.deadline && !g.deadline) g.deadline = p.deadline; });
   ['tasks', 'habits', 'inbox', 'wins', 'people', 'reading', 'admin', 'timeline', 'travel', 'templates', 'recurring'].forEach(k => {
-    (d[k] || []).forEach(it => { it = { ...it }; it.id = it.id || uid(); const ix = S[k].findIndex(x => x.id === it.id); if (ix >= 0) { if (it.replace) { delete it.replace; S[k][ix] = it; } return; } delete it.replace;
+    (d[k] || []).forEach(it => { it = { ...it }; it.id = it.id || uid(); if (k === 'reading' && it.title) { const nt = t => (t || '').toLowerCase().replace(/[^a-z0-9]/g, ''); const same = S.reading.find(x => x.id !== it.id && (nt(x.title).includes(nt(it.matchTitle || it.title)) || nt(it.title).includes(nt(x.title)))); if (same) { if (!same.author && it.author) same.author = it.author; return; } } delete it.matchTitle;
+      const ix = S[k].findIndex(x => x.id === it.id); if (ix >= 0) { if (it.replace) { delete it.replace; S[k][ix] = it; } return; } delete it.replace;
       if (k === 'tasks') it = normTask(it); if (k === 'recurring') { it.start = it.start || today(); it.days = (it.days || [0, 1, 2, 3, 4, 5, 6]).map(Number); } S[k].push(it); });
   });
   if (d.settings) { const st = d.settings;

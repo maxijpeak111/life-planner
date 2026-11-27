@@ -3547,6 +3547,80 @@
      }
     ]
    }
+  },
+  {
+   "id": "2026-11-27-books",
+   "auto": true,
+   "title": "8 books added to Reading",
+   "description": "Your books with authors.",
+   "data": {
+    "reading": [
+     {
+      "id": "rd-2611-1",
+      "title": "The Lost Art of Running",
+      "author": "Shane Benzie with Tim Major",
+      "kind": "Book",
+      "status": "want",
+      "matchTitle": "The Lost Art of Running"
+     },
+     {
+      "id": "rd-2611-2",
+      "title": "The Human Mind",
+      "author": "Paul Bloom",
+      "kind": "Book",
+      "status": "want",
+      "matchTitle": "Human Mind"
+     },
+     {
+      "id": "rd-2611-3",
+      "title": "Every Body Should Know This",
+      "author": "Dr Federica Amati",
+      "kind": "Book",
+      "status": "want",
+      "matchTitle": "Every Body Should Know This"
+     },
+     {
+      "id": "rd-2611-4",
+      "title": "What I Talk About When I Talk About Running",
+      "author": "Haruki Murakami",
+      "kind": "Book",
+      "status": "want",
+      "matchTitle": "When I Talk About Running"
+     },
+     {
+      "id": "rd-2611-5",
+      "title": "The Subtle Art of Not Giving a F*ck",
+      "author": "Mark Manson",
+      "kind": "Book",
+      "status": "want",
+      "matchTitle": "Subtle Art"
+     },
+     {
+      "id": "rd-2611-6",
+      "title": "The Psychology of Money",
+      "author": "Morgan Housel",
+      "kind": "Book",
+      "status": "want",
+      "matchTitle": "The Psychology of Money"
+     },
+     {
+      "id": "rd-2611-7",
+      "title": "Spanish in 3 Months (Hugo)",
+      "author": "DK · Isabel Cisneros",
+      "kind": "Book",
+      "status": "want",
+      "matchTitle": "Spanish in 3 Months"
+     },
+     {
+      "id": "rd-2611-8",
+      "title": "Living on Earth",
+      "author": "Peter Godfrey-Smith",
+      "kind": "Book",
+      "status": "want",
+      "matchTitle": "Living on Earth"
+     }
+    ]
+   }
   }
  ]
 }
