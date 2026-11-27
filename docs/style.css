@@ -422,3 +422,7 @@ button.card.ym{display:block;width:100%;text-align:left;color:inherit;font:inher
 .mv{background:var(--card2,#f3efe8);border:0;border-radius:8px;width:30px;height:30px;font-size:15px;color:inherit;flex:none}
 .mvs{display:flex;gap:4px;margin-right:6px}
 .phase-h .mv{margin-right:4px}
+
+.mrow.wk .wkd{min-width:64px;font-size:14px}
+.mrow.wk.today{outline:1.5px solid var(--accent,#1d7f75)}
+#tabs svg{width:22px;height:22px}
