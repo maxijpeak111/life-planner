@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.8';
+const VERSION = '2.9';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -438,10 +438,14 @@ function habitTile(t) {
   const hs = activeHabits();
   if (!hs.length) return `<div class="sect">Habits</div><button class="card empty" style="width:100%" data-act="moreGo" data-v="habits">Add your daily habits</button>`;
   const days = [...Array(7)].map((_, i) => addDays(t, i - 6));
-  return `<div class="sect"><span class="grow">Habits</span><button data-act="moreGo" data-v="habits">Edit</button></div><div class="htile card">${hs.map(h => {
+  const closed = habitsClosed(), done = hs.filter(h => habitDone(h.id, t)).length;
+  const head = `<div class="sect"><button class="hfold" data-act="habitsFold"><span class="chev">${closed ? '▸' : '▾'}</span> Habits <span class="muted">${done}/${hs.length} today</span></button><span class="grow"></span><button data-act="moreGo" data-v="habits">Edit</button></div>`;
+  if (closed) return head;
+  return head + `<div class="htile card">${hs.map(h => {
     const on = habitDone(h.id, t), n = streak(h.id);
     return `<div class="hrow2"><button class="hc ${on ? 'on' : ''}" data-act="toggleHabit" data-id="${h.id}" data-v="${t}" aria-label="${on ? 'Untick' : 'Tick'} ${esc(h.name)}">${on ? '✓' : ''}</button><span class="hn">${esc(h.name)}</span><span class="hd">${days.map(d => `<i class="${habitDone(h.id, d) ? 'on' : ''}"></i>`).join('')}</span><span class="hs ${n ? '' : 'none'}">${n ? '🔥 ' + n : '–'}</span></div>`; }).join('')}</div>`;
 }
+function habitsClosed() { try { return localStorage.getItem('lifeplanner.ui.habitsClosed') === '1'; } catch (e) { return false; } }
 function journalPrompt(t) {
   const j = S.journal[t], wrote = j && Object.values(j).some(v => typeof v === 'string' ? v.trim() : v && typeof v === 'object' && Object.values(v).some(x => typeof x === 'string' && x.trim()));
   return `<button class="card jprompt" data-act="openJournalDay" data-v="${t}"><div class="jp">${esc(JPROMPTS[daySeed(t) % JPROMPTS.length])}</div><div class="jgo">${wrote ? 'Open today\'s entry ›' : 'Write tonight\'s entry ›'}</div></button>`;
@@ -493,7 +497,7 @@ ${dayPlans(d).map(x => `<div class="wline"><i class="dot" style="background:${KI
 }
 function calMonth() {
   const mk = monthKey(V.cal.date), first = pd(mk + '-01'), pad = dow(mk + '-01');
-  const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(), t = today();
+  const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(), t = today(), mItems = monthItems(mk);
   let h = dnav(first.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), 'm') + `<div class="month">${DOW.map(d => `<div class="dh">${d[0]}</div>`).join('')}`;
   for (let i = 0; i < pad; i++) h += '<div class="mcell out"></div>';
   for (let n = 1; n <= days; n++) {
@@ -501,24 +505,28 @@ function calMonth() {
     const ts = S.tasks.filter(x => x.date === d && x.status !== 'dropped' && !isPlan(x));
     const hasPlan = dayPlans(d).length;
     const tags = [...new Set(ts.map(x => x.tag))];
-    const flag = S.goals.some(g => g.deadline === d && !g.archived) || S.timeline.some(e => e.date === d) ? '⛳' : '';
+    const flag = mItems.some(it => it[0] === d) ? '⛳' : '';
     h += `<button class="mcell ${d === t ? 'today' : ''}" data-act="calDay" data-v="${d}"><span>${n}</span>${S.shifts[d] && !S.shifts[d].off ? '<span class="flag">💼</span>' : ''}${hasPlan ? '<span class="flag">◆</span>' : ''}${flag ? `<span class="flag">${flag}</span>` : ''}<span class="dots">${tags.map(k => `<i class="dot dot-${k}"></i>`).join('')}</span></button>`;
   }
-  h += '</div><div class="small muted" style="margin-top:8px">💼 shift · ◆ plan · ⛳ deadline or event · dots = task types</div>';
+  h += '</div><div class="small muted" style="margin-top:8px">💼 shift · ◆ plan · ⛳ goal deadline, event or trip · dots = task types</div>';
+  h += `<div class="sect">Goals & milestones this month</div>${mItems.length ? `<div class="card">${mItems.map(([d, tx, gid]) => `<button class="yrow" style="width:100%;text-align:left" data-act="${gid ? 'openGoal' : 'calDay'}" data-${gid ? 'id' : 'v'}="${gid || d}"><span class="d">${Number(d.slice(8))}</span><span>${esc(tx)}</span></button>`).join('')}</div>` : '<div class="card empty small">No goal deadlines or milestones this month.</div>'}`;
   const st = statsRange(mk + '-01', mk + '-' + z(days));
   return h + `<div class="sect">This month</div>` + statsHtml(st);
+}
+function monthItems(mk) {
+  const items = [];
+  S.goals.forEach(g => { if (!g.archived && g.deadline && g.deadline.startsWith(mk)) items.push([g.deadline, '⛰ ' + g.title + (g.achieved ? ' (achieved)' : ''), g.id]); });
+  S.timeline.forEach(e => { if (e.date && e.date.startsWith(mk)) items.push([e.date, '◆ ' + e.title]); });
+  S.wins.forEach(w => { if (w.date && w.date.startsWith(mk)) items.push([w.date, '🏆 ' + w.title]); });
+  S.travel.forEach(tv => { if (tv.date && tv.date.startsWith(mk)) items.push([tv.date, '✈️ ' + tv.place]); });
+  return items.sort((a, b) => a[0].localeCompare(b[0]));
 }
 function calYear() {
   const y = V.cal.date.slice(0, 4);
   let h = dnav(y, 'y') + `<div style="margin-top:6px"><button class="btn sm" data-act="addTimeline">＋ Add event or marker</button></div>`;
   for (let m = 1; m <= 12; m++) {
-    const mk = y + '-' + z(m), items = [];
-    S.goals.forEach(g => { if (g.deadline && g.deadline.startsWith(mk)) items.push([g.deadline, '⛰ ' + g.title + (g.achieved ? ' ✓' : '')]); });
-    S.timeline.forEach(e => { if (e.date && e.date.startsWith(mk)) items.push([e.date, '◆ ' + e.title]); });
-    S.wins.forEach(w => { if (w.date && w.date.startsWith(mk)) items.push([w.date, '🏆 ' + w.title]); });
-    S.travel.forEach(tv => { if (tv.date && tv.date.startsWith(mk)) items.push([tv.date, '✈️ ' + tv.place]); });
-    items.sort((a, b) => a[0].localeCompare(b[0]));
-    h += `<div class="card ym"><div class="mt">${pd(mk + '-01').toLocaleDateString('en-GB', { month: 'long' })}</div>${items.length ? items.map(([d, tx]) => `<div class="yrow"><span class="d">${Number(d.slice(8))}</span><span>${esc(tx)}</span></div>`).join('') : '<div class="small muted">—</div>'}</div>`;
+    const mk = y + '-' + z(m), items = monthItems(mk);
+    h += `<button class="card ym" data-act="calMonthOpen" data-v="${mk}"><div class="mt">${pd(mk + '-01').toLocaleDateString('en-GB', { month: 'long' })} <span class="muted">›</span></div>${items.length ? items.map(([d, tx]) => `<div class="yrow"><span class="d">${Number(d.slice(8))}</span><span>${esc(tx)}</span></div>`).join('') : '<div class="small muted">—</div>'}</button>`;
   }
   return h;
 }
@@ -549,16 +557,21 @@ ${feeds.length ? `<div class="feeds">↑ Feeds into: ${feeds.map(f => esc(f.titl
   return h + '</div>';
 }
 function goalPath() {
-  const act = activeGoals(), roots = act.filter(g => !g.feeds.some(f => { const x = goalById(f); return x && !x.archived && !x.achieved; })).sort((a, b) => HZO[b.horizon] - HZO[a.horizon] || a.title.localeCompare(b.title));
-  const tops = roots.filter(g => feeders(g).length || g.horizon === 'long'), loose = roots.filter(g => !tops.includes(g));
-  const shown = new Set();
-  const node = (g, depth, parent) => { if (shown.has(g.id)) return ''; shown.add(g.id); const p = rollPct(g), kids = feeders(g).filter(k => !k.achieved).sort((a, b) => HZO[b.horizon] - HZO[a.horizon]);
-    const also = g.feeds.filter(f => f !== (parent && parent.id)).map(goalById).filter(x => x && !x.archived);
-    return `<button class="pnode hz-${g.horizon}" style="margin-left:${Math.min(depth, 4) * 16}px" data-act="openGoal" data-id="${g.id}"><span class="hzb">${HZN[g.horizon]}</span><div class="tt"><div class="title">${g.pillars.map(x => pillarById(x)?.icon || '').join('')} ${esc(g.title)}</div><div class="bar"><i style="width:${p}%"></i></div><div class="meta">${p}%${kids.length ? ' overall' : ''}${nextStep(g) ? ' · next: ' + esc(nextStep(g).title) : ''}</div>${also.length ? `<div class="meta">↗ also builds: ${also.map(x => esc(x.title.split(' — ')[0])).join(', ')}</div>` : ''}</div></button>${kids.map(k => node(k, depth + 1, g)).join('')}`; };
-  let h = `<p class="small muted" style="margin-top:12px">Steps build short-term goals, short build mid, mid build long. Progress flows up the ladder.</p>`;
+  const act = activeGoals();
+  let h = `<p class="small muted" style="margin-top:12px">In time order: short term at the top, building down to your long-term goals. Each level runs by date.</p>`;
   if (!act.length) return h + '<div class="card empty">No goals yet.</div>';
-  h += tops.map(g => `<div class="ptree">${node(g, 0, null)}</div>`).join('');
-  if (loose.length) h += `<div class="sect">Not linked yet</div><p class="small muted">Link each one to the bigger goal it builds toward.</p><div class="list">${loose.map(g => `<div class="mrow"><div class="tt"><div class="title">${esc(g.title)}</div><div class="meta">${HZN[g.horizon]} term</div></div><button class="btn sm" data-act="linkUp" data-id="${g.id}">Link ↑</button></div>`).join('')}</div>`;
+  h += '<div class="ppath">';
+  ['short', 'mid', 'long'].forEach(hz => {
+    const lv = act.filter(g => g.horizon === hz).sort((a, b) => (goalDate(a) || '9999').localeCompare(goalDate(b) || '9999') || a.title.localeCompare(b.title));
+    if (!lv.length) return;
+    h += `<div class="pp-lv"><span class="pp-lab">${HZN[hz]} term</span></div>`;
+    lv.forEach(g => { const p = rollPct(g), ns = nextStep(g), d = goalDate(g), up = g.feeds.map(goalById).filter(x => x && !x.archived && !x.achieved);
+      h += `<button class="pp-node hz-${hz}" data-act="openGoal" data-id="${g.id}"><span class="pp-dot"></span><div class="tt"><div class="title">${g.pillars.map(x => pillarById(x)?.icon || '').join('')} ${esc(g.title)}</div>
+<div class="meta">${d ? (g.deadline ? 'by ' : 'from ') + fmt(d, { day: 'numeric', month: 'short', year: 'numeric' }) : 'No date yet'}</div>
+<div class="bar"><i style="width:${p}%"></i></div><div class="meta">${p}%${ns ? ' · next: ' + esc(ns.title) : allSteps(g).length ? ' · all steps done' : ' · no steps yet'}</div>
+${up.length ? `<div class="meta">↓ builds: ${up.map(x => esc(x.title.split(/ — |: /)[0])).join(', ')}</div>` : hz !== 'long' ? '<div class="meta warn">Not linked to a bigger goal yet</div>' : ''}</div></button>`; });
+  });
+  h += '</div>';
   if (!act.some(g => g.horizon === 'long')) h += `<button class="btn full" style="margin-top:14px" data-act="newGoal">＋ Your overall long-term goal</button>`;
   return h;
 }
@@ -1477,6 +1490,8 @@ const ACT = {
 
   /* calendar */
   calMode: el => { V.cal.mode = el.dataset.v; render(); },
+  calMonthOpen: el => nav(() => { V.cal.mode = 'month'; V.cal.date = el.dataset.v + '-01'; V.tab = 'calendar'; }),
+  habitsFold: () => { try { localStorage.setItem('lifeplanner.ui.habitsClosed', habitsClosed() ? '0' : '1'); } catch (e) { } render(); },
   calDay: el => nav(() => { V.cal.mode = 'day'; V.cal.date = el.dataset.v; V.tab = 'calendar'; }),
   calToday: () => { V.cal.date = today(); render(); },
   calStep: el => { const v = el.dataset.v; if (v.endsWith('m')) V.cal.date = addMonths(monthKey(V.cal.date), v.startsWith('-') ? -1 : 1) + '-01'; else if (v.endsWith('y')) V.cal.date = (Number(V.cal.date.slice(0, 4)) + (v.startsWith('-') ? -1 : 1)) + '-01-01'; else V.cal.date = addDays(V.cal.date, Number(v)); render(); },
