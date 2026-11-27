@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.6';
+const VERSION = '2.7';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -1631,6 +1631,7 @@ function appForm(i) {
 function mergeData(d) {
   (d.pillars || []).forEach(np => { const op = S.pillars.find(p => p.id === np.id); if (!op) S.pillars.push(np); });
   (d.goals || []).forEach(raw => {
+    if (raw.ifNoMatch && !goalById(raw.id) && findGoalByMatch(raw.ifNoMatch, raw.id)) return;
     const ng = normGoal(JSON.parse(JSON.stringify(raw)));
     const og = S.goals.find(g => g.id === ng.id);
     if (!og) { ng.created = ng.created || today(); S.goals.push(ng); return; }
@@ -1638,9 +1639,15 @@ function mergeData(d) {
     allSteps(ng).forEach(s => { const o = old[s.id]; if (o) { s.status = o.status; s.doneOn = o.doneOn; s.note = o.note || s.note || ''; } });
     const keepSteps = allSteps(og).filter(s => !allSteps(ng).some(x => x.id === s.id) && (raw.replaceSteps ? s.status === 'done' : s.status !== 'todo'));
     if (keepSteps.length) ng.phases.push({ id: uid(), name: raw.replaceSteps ? 'Done before' : 'Kept from before', steps: keepSteps });
-    delete ng.replaceSteps;
+    delete ng.replaceSteps; delete ng.ifNoMatch;
     Object.assign(og, ng, { archived: og.archived, achieved: og.achieved, archiveNote: og.archiveNote });
   });
+  /* goalAddSteps: add a phase of steps to an existing goal (by id, or by title match) — never removes anything */
+  (d.goalAddSteps || []).forEach(a => { const g = a.id ? goalById(a.id) : findGoalByMatch(a.match); if (!g || !a.phase || g.phases.some(p => p.id === a.phase.id)) return;
+    const ph = JSON.parse(JSON.stringify(a.phase)); ph.steps = (ph.steps || []).map(x => ({ ...x, status: x.status || 'todo' })); g.phases.push(ph); });
+  /* goalArchive: archive an old goal with a note (restorable). onlyIf = only when its replacement goal exists */
+  (d.goalArchive || []).forEach(a => { const g = a.id ? goalById(a.id) : findGoalByMatch(a.match); if (!g || g.archived || g.achieved) return;
+    if (a.onlyIf && !findGoalByMatch(a.onlyIf, g.id)) return; g.archived = true; g.archivedOn = today(); g.archiveNote = a.note || ''; });
   /* goalPillars: set which pillars existing goals sit on (nothing else changes) */
   (d.goalPillars || []).forEach(p => { if (!Array.isArray(p.pillars)) return; S.goalPillarFix = S.goalPillarFix || {}; S.goalPillarFix[p.id] = p.pillars; });
   S.goals.forEach(g => { const fx = S.goalPillarFix && S.goalPillarFix[g.id]; if (fx) g.pillars = fx.filter(x => pillarById(x)); });
@@ -1661,11 +1668,20 @@ function mergeData(d) {
     else if (k !== 'letter' && !S.vision[k]) S.vision[k] = d.vision[k];
   }
 }
+function findGoalByMatch(re, notId) { if (!re) return null; let rx; try { rx = new RegExp(re, 'i'); } catch (e) { return null; } return S.goals.find(g => g.id !== notId && !g.archived && !g.achieved && rx.test(g.title)) || null; }
+/* auto updates: applied on open without tapping Add (copy of the data kept first under lifeplanner.data.preupdate) */
+function autoApply() {
+  const auto = PENDING.filter(u => u.auto && !u.enc); if (!auto.length) return;
+  try { localStorage.setItem('lifeplanner.data.preupdate', JSON.stringify(S)); } catch (e) { }
+  auto.forEach(u => { try { mergeData(u.data || {}); S.appliedUpdates.push(u.id); } catch (e) { } });
+  PENDING = PENDING.filter(p => !S.appliedUpdates.includes(p.id)); save(); render(); toast('Updated: ' + auto.map(u => u.title).join(', '));
+}
 async function checkUpdates() {
   try {
     const r = await fetch('updates.json?ts=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
     const j = await r.json();
     PENDING = (j.updates || []).filter(u => u.id && !S.appliedUpdates.includes(u.id));
+    autoApply();
     if (V.tab === 'today' && !$('#sheet-root').classList.contains('open')) render();
   } catch (e) { }
 }
