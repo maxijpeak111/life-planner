@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '3.0';
+const VERSION = '3.1';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -44,7 +44,17 @@ function fmtLen(m) { m = Number(m) || 0; if (!m) return ''; const h = Math.floor
 function monthKey(s) { return s.slice(0, 7); }
 function addMonths(mk, n) { const d = pd(mk + '-01'); d.setMonth(d.getMonth() + n); return ds(d).slice(0, 7); }
 function today() { return ds(); }
-function phase() { const h = new Date().getHours(); return h >= 5 && h < 10 ? 'sunrise' : h >= 10 && h < 17 ? 'day' : h >= 17 && h < 21 ? 'sunset' : 'night'; }
+/* sun times for Manchester (NOAA approximation) — the night look starts at sunset */
+function sunTimes(d = new Date()) {
+  const lat = 53.48, lng = -2.24, rad = Math.PI / 180, start = new Date(d.getFullYear(), 0, 0), N = Math.floor((d - start) / 864e5);
+  const g = 2 * Math.PI / 365 * (N - 1), eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  const ha = Math.acos(Math.cos(90.833 * rad) / (Math.cos(lat * rad) * Math.cos(dec)) - Math.tan(lat * rad) * Math.tan(dec)) / rad;
+  const off = -d.getTimezoneOffset(), noon = 720 - 4 * lng - eq + off;
+  return { rise: (noon - 4 * ha) / 60, set: (noon + 4 * ha) / 60 };
+}
+function phase() { const n = new Date(), h = n.getHours() + n.getMinutes() / 60, s = sunTimes(n);
+  return h >= s.rise - 0.5 && h < s.rise + 1.5 ? 'sunrise' : h >= s.rise + 1.5 && h < s.set - 1 ? 'day' : h >= s.set - 1 && h < s.set ? 'sunset' : 'night'; }
 function greet() { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'; }
 
 /* ---------- data ---------- */
@@ -230,9 +240,9 @@ let PENDING = [];
 /* ---------- painterly scene ---------- */
 const PAL = {
   sunrise: { sky: ['#F4C3B4', '#FCE7D6'], sun: '#F6B38A', m1: '#CEC5DF', m2: '#A1B2D1', m3: '#7A8DB1', s1: '#A3D3D0', s2: '#7DB8BE', glint: '#FFF3E6', cap: '#FFF6EE' },
-  day: { sky: ['#BCDDEF', '#EEF7F6'], sun: '#FFE4A0', m1: '#C3D7E6', m2: '#93B5CE', m3: '#6189A8', s1: '#86CFD2', s2: '#4FA7B2', glint: '#FFFFFF', cap: '#FFFFFF' },
+  day: { sky: ['#8FCBE3', '#E3F3FA'], sun: '#FFE08A', m1: '#B4D2C4', m2: '#79AA90', m3: '#3E7D5A', s1: '#2F7DAE', s2: '#1B5E8C', glint: '#FFFFFF', cap: '#FFFFFF' },
   sunset: { sky: ['#EBA59F', '#F8D5B9'], sun: '#F08D6C', m1: '#D2ABC2', m2: '#A08AB0', m3: '#6E6892', s1: '#E5B3A8', s2: '#9EABC6', glint: '#FFE2CB', cap: '#FBE4DA' },
-  night: { sky: ['#162036', '#2C3A5C'], sun: '#EFE6CC', m1: '#3F4D70', m2: '#2F3D5E', m3: '#222E49', s1: '#2A4062', s2: '#1C2E4A', glint: '#C9D6F0', cap: '#8E9BBA' }
+  night: { sky: ['#0E1620', '#24344C'], sun: '#F0C987', m1: '#2C3D55', m2: '#1F2D40', m3: '#131D29', s1: '#1C2B3C', s2: '#0E1620', glint: '#F0C987', cap: '#7F8EA3' }
 };
 function scene(p) {
   const c = PAL[p];
@@ -267,7 +277,7 @@ function applyTheme() {
   st.textContent = TAGS.map(k => { const c = S.tagColors[k];
     return `.tag-${k}{background:color-mix(in srgb,${c} 24%,transparent);color:color-mix(in srgb,${c} 62%,${dark ? 'white' : 'black'})}.dot-${k}{background:${c}}`; }).join('');
   st.textContent += ':root{' + TAGS.map(k => `--tag${k}:${S.tagColors[k]}`).join(';') + '}';
-  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = dark ? '#141B2B' : '#FBF8F3';
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = dark ? '#141D27' : '#F5F9FC';
 }
 
 /* ---------- render ---------- */
