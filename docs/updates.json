@@ -1837,6 +1837,1716 @@
      }
     ]
    }
+  },
+  {
+   "id": "2026-11-27-goal-paths-r3b",
+   "auto": true,
+   "title": "Goal fixes: Level 2 order + clearer milestones",
+   "description": "Level 2 prep steps moved into Phase 1 before filming; milestones marked with a flag instead of a tick; goals linked up.",
+   "data": {
+    "goals": [
+     {
+      "id": "g-brand",
+      "title": "Launch the Maxi Peak brand",
+      "horizon": "mid",
+      "pillars": [
+       "ptbiz",
+       "money"
+      ],
+      "deadline": "2027-09-24",
+      "feeds": [
+       "g-coach",
+       "g-freedom",
+       "r3-contentmoney"
+      ],
+      "why": "Not a fitness account: someone stacking capability across body, trade and language, documented as it happens. Every stream is one chain: training → content → PT credibility → business.",
+      "sources": "Your Brand Blueprint + Content Restart (Notion) · gov.uk trade mark guidance · NI Business Info",
+      "phases": [
+       {
+        "id": "g-brand-r3p1",
+        "name": "Phase 1 — Foundations (Dec–Jan)",
+        "steps": [
+         {
+          "id": "g-brand-r3-1-1",
+          "title": "Reread the Brand Blueprint, write one bio line under 80 characters",
+          "mins": 20,
+          "why": "One line on every platform makes three handles read as one brand: someone stacking capability across body, trade and language, documented as it happens."
+         },
+         {
+          "id": "g-brand-r3-1-2",
+          "title": "Bios + one profile photo on TikTok @maxi.peak, YouTube @maxipeak, Instagram @maxijpeak",
+          "mins": 30
+         },
+         {
+          "id": "g-brand-r3-1-3",
+          "title": "Decide: 'To the Peak' as the whole brand, or only the coaching side under Maxi Peak",
+          "mins": 20
+         },
+         {
+          "id": "g-brand-r3-1-4",
+          "title": "UK IPO trade mark search for Beyond / Over / To the Peak in class 41 (fitness training) + Companies House",
+          "mins": 45,
+          "why": "A registered company or business name alone doesn't stop someone else using it. Check the trade mark register before committing to a name.",
+          "source": "gov.uk — Register a trade mark: before you apply"
+         },
+         {
+          "id": "g-brand-r3-1-5",
+          "title": "Check handles for each name: TikTok, Instagram, YouTube, .com, .co.uk",
+          "mins": 30,
+          "why": "@maxipeak was already taken on Instagram, which is how the current handle mismatch started."
+         }
+        ]
+       },
+       {
+        "id": "g-brand-r3p2",
+        "name": "Phase 2 — Show up consistently (Feb–Apr)",
+        "steps": [
+         {
+          "id": "g-brand-r3-2-1",
+          "title": "First post, then 2 a week for 4 weeks (linked: Content goal)"
+         },
+         {
+          "id": "g-brand-r3-2-2",
+          "title": "Film 'The Stack': sparring → study desk → Spanish flashcards → pool/run, captured over one normal week",
+          "mins": 90,
+          "why": "Your signature format from the Blueprint, never posted yet. It shows the multi-discipline thread instead of explaining it."
+         },
+         {
+          "id": "g-brand-r3-2-3",
+          "title": "One real Stoic line per video",
+          "mins": 5
+         },
+         {
+          "id": "g-brand-r3-2-4",
+          "title": "4-week review: which pillar gets saves + shares, double down there",
+          "mins": 30
+         },
+         {
+          "id": "g-brand-r3-2-5",
+          "title": "'Qualified' video in April, the payoff of qualifying in public",
+          "mins": 120
+         }
+        ]
+       },
+       {
+        "id": "g-brand-r3p3",
+        "name": "Phase 3 — Lock the name + look (Apr–May)",
+        "steps": [
+         {
+          "id": "g-brand-r3-3-1",
+          "title": "Pick the final name with 3 tests: feels right out loud, all handles free, IPO search clear",
+          "mins": 30,
+          "why": "Your own rule: lock it once it actually feels right. The deadline is end of April, straight after qualifying."
+         },
+         {
+          "id": "g-brand-r3-3-2",
+          "title": "Buy the .com + .co.uk for the final name",
+          "mins": 20
+         },
+         {
+          "id": "g-brand-r3-3-3",
+          "title": "Visual identity session with Max: 2–3 reference wordmarks, settle cool/minimal vs bold against your warm, organic sound",
+          "mins": 60,
+          "why": "The Blueprint flagged this tension. Decide it once there's enough footage to judge."
+         },
+         {
+          "id": "g-brand-r3-3-4",
+          "title": "Wordmark logo with Max, or in Canva",
+          "mins": 120
+         },
+         {
+          "id": "g-brand-r3-3-5",
+          "title": "Decide whether to register the trade mark, from £170 online for one class",
+          "mins": 15,
+          "why": "Worth doing once income starts, not before.",
+          "source": "NI Business Info — trade mark cost"
+         }
+        ]
+       },
+       {
+        "id": "g-brand-r3p4",
+        "name": "Phase 4 — Relaunch (Jun–Jul)",
+        "steps": [
+         {
+          "id": "g-brand-r3-4-1",
+          "title": "Ibiza shot list for the launch bank: training, scenic, working on holiday",
+          "mins": 30
+         },
+         {
+          "id": "g-brand-r3-4-2",
+          "title": "Rename all three accounts on the same day under the final name",
+          "mins": 30,
+          "why": "Fixes @maxi.peak / @maxipeak / @maxijpeak in one move. Your rule: relaunch once the website is live and you're qualified."
+         },
+         {
+          "id": "g-brand-r3-4-3",
+          "title": "Website live (linked: Website goal)"
+         },
+         {
+          "id": "g-brand-r3-4-4",
+          "title": "Launch video, 'the receipts': 1 Apr 2026 turning point → 45:03 10K → the Nov restart → qualified",
+          "mins": 120,
+          "why": "The story only carries weight because it's dated and checkable, not just stated."
+         },
+         {
+          "id": "g-brand-r3-4-5",
+          "title": "Launch week: Isaac shares, Max/Femi promote, message Liam",
+          "mins": 20
+         },
+         {
+          "id": "g-brand-r3-4-6",
+          "title": "Link in bio goes to booking",
+          "mins": 10
+         }
+        ]
+       },
+       {
+        "id": "g-brand-r3p5",
+        "name": "Phase 5 — The brand brings clients (Aug–Sep)",
+        "steps": [
+         {
+          "id": "g-brand-r3-5-1",
+          "title": "Olympic tri race-day video",
+          "mins": 120
+         },
+         {
+          "id": "g-brand-r3-5-2",
+          "title": "🏁 First client enquiry from content"
+         },
+         {
+          "id": "g-brand-r3-5-3",
+          "title": "Simple email signup on the site, parked until there's an audience",
+          "mins": 45
+         },
+         {
+          "id": "g-brand-r3-5-4",
+          "title": "Run Club: yes or no, now the brand is live",
+          "mins": 15
+         },
+         {
+          "id": "g-brand-r3-5-5",
+          "title": "Brand review: followers, enquiries, what to change",
+          "mins": 30
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "r3-website",
+      "title": "Maxi Peak website live by summer 2027 + client app",
+      "horizon": "short",
+      "pillars": [
+       "ptbiz"
+      ],
+      "deadline": "2027-07-31",
+      "feeds": [
+       "g-brand"
+      ],
+      "why": "Social = audience, website = sales. Your Blueprint: sell direct from the site, no third-party platform dependency.",
+      "sources": "Goal Plans Round 2 (Notion)",
+      "phases": [
+       {
+        "id": "r3-website-r3p1",
+        "name": "Brand basics (Jan–Mar)",
+        "steps": [
+         {
+          "id": "r3-website-r3-1-1",
+          "title": "Lock final name (linked: brand goal)",
+          "mins": 30
+         },
+         {
+          "id": "r3-website-r3-1-2",
+          "title": "Domain matching the handles",
+          "mins": 20
+         },
+         {
+          "id": "r3-website-r3-1-3",
+          "title": "Site plan with Claude: Home, About, Services & prices, Testimonials, Book",
+          "mins": 45
+         }
+        ]
+       },
+       {
+        "id": "r3-website-r3p2",
+        "name": "Build the site (Apr–Jun)",
+        "steps": [
+         {
+          "id": "r3-website-r3-2-1",
+          "title": "Photo shoot with Max",
+          "mins": 120
+         },
+         {
+          "id": "r3-website-r3-2-2",
+          "title": "About text",
+          "mins": 60
+         },
+         {
+          "id": "r3-website-r3-2-3",
+          "title": "Services + prices from the £500/month goal",
+          "mins": 30
+         },
+         {
+          "id": "r3-website-r3-2-4",
+          "title": "Build v1 with Claude on GitHub Pages + connect the domain",
+          "mins": 120
+         },
+         {
+          "id": "r3-website-r3-2-5",
+          "title": "Booking link or contact form",
+          "mins": 30
+         },
+         {
+          "id": "r3-website-r3-2-6",
+          "title": "Privacy policy",
+          "mins": 45,
+          "why": "Consultation forms collect health information, which counts as special category data under UK GDPR."
+         },
+         {
+          "id": "r3-website-r3-2-7",
+          "title": "ICO data protection fee self-assessment",
+          "mins": 15
+         },
+         {
+          "id": "r3-website-r3-2-8",
+          "title": "2 testimonials on the site",
+          "mins": 15
+         },
+         {
+          "id": "r3-website-r3-2-9",
+          "title": "3 friends test it on their phones",
+          "mins": 20
+         },
+         {
+          "id": "r3-website-r3-2-10",
+          "title": "🏁 Site live"
+         }
+        ]
+       },
+       {
+        "id": "r3-website-r3p3",
+        "name": "Client app (Jun–Dec)",
+        "steps": [
+         {
+          "id": "r3-website-r3-3-1",
+          "title": "Decide v1: programme, session logging, weekly check-in",
+          "mins": 30
+         },
+         {
+          "id": "r3-website-r3-3-2",
+          "title": "Build it from the PT app with Claude"
+         },
+         {
+          "id": "r3-website-r3-3-3",
+          "title": "Client data: consent + private, secure storage, not a public repo",
+          "mins": 45,
+          "why": "Client health data must not sit in public code."
+         },
+         {
+          "id": "r3-website-r3-3-4",
+          "title": "Aiden tests it for 4 weeks"
+         },
+         {
+          "id": "r3-website-r3-3-5",
+          "title": "Fix list",
+          "mins": 30
+         },
+         {
+          "id": "r3-website-r3-3-6",
+          "title": "🏁 First paying client on the app"
+         },
+         {
+          "id": "r3-website-r3-3-7",
+          "title": "Link it from the site",
+          "mins": 10
+         }
+        ]
+       }
+      ],
+      "ifNoMatch": "website"
+     },
+     {
+      "id": "r3-contentmoney",
+      "title": "Making money from content",
+      "horizon": "mid",
+      "pillars": [
+       "money",
+       "ptbiz"
+      ],
+      "deadline": "2029-12-31",
+      "feeds": [
+       "g-freedom"
+      ],
+      "why": "A second income stream that works from anywhere.",
+      "sources": "Goal Plans Round 2 (Notion)",
+      "phases": [
+       {
+        "id": "r3-contentmoney-r3p1",
+        "name": "Phase 1 — Content brings clients (2027)",
+        "steps": [
+         {
+          "id": "r3-contentmoney-r3-1-1",
+          "title": "Posting 2 a week (linked: Content)"
+         },
+         {
+          "id": "r3-contentmoney-r3-1-2",
+          "title": "Site link in bio (linked: Website)"
+         },
+         {
+          "id": "r3-contentmoney-r3-1-3",
+          "title": "🏁 First client enquiry from content"
+         }
+        ]
+       },
+       {
+        "id": "r3-contentmoney-r3p2",
+        "name": "Phase 2 — Products (2028)",
+        "steps": [
+         {
+          "id": "r3-contentmoney-r3-2-1",
+          "title": "First product: stretch routine pack or 8-week tri base plan",
+          "mins": 240
+         },
+         {
+          "id": "r3-contentmoney-r3-2-2",
+          "title": "Price it",
+          "mins": 30
+         },
+         {
+          "id": "r3-contentmoney-r3-2-3",
+          "title": "Sales page on the site",
+          "mins": 60
+         },
+         {
+          "id": "r3-contentmoney-r3-2-4",
+          "title": "🏁 First sale"
+         },
+         {
+          "id": "r3-contentmoney-r3-2-5",
+          "title": "🏁 10 sales"
+         }
+        ]
+       },
+       {
+        "id": "r3-contentmoney-r3p3",
+        "name": "Phase 3 — Platform + brand income (2028–29)",
+        "steps": [
+         {
+          "id": "r3-contentmoney-r3-3-1",
+          "title": "Pitch a local gym or kit brand",
+          "mins": 30,
+          "why": "Brand deals have no follower minimum."
+         },
+         {
+          "id": "r3-contentmoney-r3-3-2",
+          "title": "Some videos over 1 min",
+          "why": "TikTok Creator Rewards needs 10,000 followers, 100,000 views in 30 days and videos over 1 min.",
+          "source": "Hootsuite — TikTok followers to get paid"
+         },
+         {
+          "id": "r3-contentmoney-r3-3-3",
+          "title": "🏁 1k / 5k / 10k followers"
+         },
+         {
+          "id": "r3-contentmoney-r3-3-4",
+          "title": "Apply for Creator Rewards",
+          "mins": 10
+         }
+        ]
+       }
+      ],
+      "ifNoMatch": "money from content"
+     },
+     {
+      "id": "g-coach",
+      "title": "Coach while travelling: online coaching full-time by 2029–30",
+      "horizon": "long",
+      "pillars": [
+       "ptbiz",
+       "money",
+       "travel"
+      ],
+      "deadline": "2030-12-31",
+      "feeds": [
+       "g-freedom"
+      ],
+      "why": "Your long-term identity: coach and guide in sport, health and human performance. PT is the gateway, not the ceiling.",
+      "sources": "Goal Plans Round 2 + Brand Blueprint (Notion)",
+      "phases": [
+       {
+        "id": "g-coach-r3p1",
+        "name": "Phase 1 — Foundations (Dec 2026–Apr 2027)",
+        "steps": [
+         {
+          "id": "g-coach-r3-1-1",
+          "title": "Level 2 filmed + passed, then Level 3 (linked: Qualified PT)"
+         },
+         {
+          "id": "g-coach-r3-1-2",
+          "title": "Coach Aiden + Max free (linked)"
+         },
+         {
+          "id": "g-coach-r3-1-3",
+          "title": "One-line offer per client group: busy shift workers/beginners, hybrid athletes, Spanish speakers",
+          "mins": 30
+         }
+        ]
+       },
+       {
+        "id": "g-coach-r3p2",
+        "name": "Phase 2 — First clients + online pilot (Apr–Dec 2027)",
+        "steps": [
+         {
+          "id": "g-coach-r3-2-1",
+          "title": "🏁 First paying client (linked)"
+         },
+         {
+          "id": "g-coach-r3-2-2",
+          "title": "Onboarding kit: consultation form, PAR-Q, weekly check-in template",
+          "mins": 60
+         },
+         {
+          "id": "g-coach-r3-2-3",
+          "title": "Online pilot: 2 people, 8 weeks, on the client app"
+         },
+         {
+          "id": "g-coach-r3-2-4",
+          "title": "3 online testimonials",
+          "mins": 15
+         },
+         {
+          "id": "g-coach-r3-2-5",
+          "title": "Confirm insurance covers online clients abroad",
+          "mins": 20,
+          "why": "Some policies limit online cover to UK clients.",
+          "source": "Insure4Sport — PT insurance"
+         },
+         {
+          "id": "g-coach-r3-2-6",
+          "title": "🏁 First paying online client"
+         }
+        ]
+       },
+       {
+        "id": "g-coach-r3p3",
+        "name": "Phase 3 — Build online (2028)",
+        "steps": [
+         {
+          "id": "g-coach-r3-3-1",
+          "title": "Set the online price",
+          "mins": 30,
+          "why": "UK fully programmed online coaching is mostly £120–£300/month. Start near the bottom.",
+          "source": "REPS — PT cost UK 2026"
+         },
+         {
+          "id": "g-coach-r3-3-2",
+          "title": "Programme templates: beginner, shift worker, tri base, strength (2h each)"
+         },
+         {
+          "id": "g-coach-r3-3-3",
+          "title": "Weekly check-ins under 15 min per client, timed for a month",
+          "mins": 15
+         },
+         {
+          "id": "g-coach-r3-3-4",
+          "title": "Hybrid-athlete content from the tri journey"
+         },
+         {
+          "id": "g-coach-r3-3-5",
+          "title": "🏁 5 / 10 / 15 online clients"
+         }
+        ]
+       },
+       {
+        "id": "g-coach-r3p4",
+        "name": "Phase 4 — Test it abroad (2028–29)",
+        "steps": [
+         {
+          "id": "g-coach-r3-4-1",
+          "title": "Coach every client from the road on the Europe trip"
+         },
+         {
+          "id": "g-coach-r3-4-2",
+          "title": "Worldwide insurance add-on",
+          "mins": 20
+         },
+         {
+          "id": "g-coach-r3-4-3",
+          "title": "Accountant: tax while travelling, before long stints",
+          "mins": 60
+         },
+         {
+          "id": "g-coach-r3-4-4",
+          "title": "Schengen 90/180 in travel plans",
+          "mins": 15,
+          "why": "UK nationals can stay 90 days in any 180 in the Schengen area."
+         },
+         {
+          "id": "g-coach-r3-4-5",
+          "title": "Spanish coaching cues + exercise names"
+         },
+         {
+          "id": "g-coach-r3-4-6",
+          "title": "🏁 First Spanish-speaking client"
+         }
+        ]
+       },
+       {
+        "id": "g-coach-r3p5",
+        "name": "Phase 5 — Full-time (2029–30)",
+        "steps": [
+         {
+          "id": "g-coach-r3-5-1",
+          "title": "🏁 Online income covers costs 6 months in a row"
+         },
+         {
+          "id": "g-coach-r3-5-2",
+          "title": "Decide when to leave the hotel"
+         },
+         {
+          "id": "g-coach-r3-5-3",
+          "title": "Look at a Spain base",
+          "mins": 60,
+          "why": "Spain's digital nomad visa needed about €2,849/month solo in 2026, max 20% Spanish clients.",
+          "source": "The Local — Spain digital nomad visa 2026"
+         },
+         {
+          "id": "g-coach-r3-5-4",
+          "title": "First paid in-person block or retreat, e.g. Spain"
+         },
+         {
+          "id": "g-coach-r3-5-5",
+          "title": "🏁 Coaching full-time while travelling"
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-freedom",
+      "title": "Financial freedom: location-free income that covers life",
+      "horizon": "long",
+      "pillars": [
+       "money",
+       "life"
+      ],
+      "deadline": "2030-12-31",
+      "feeds": [],
+      "why": "In your words: not just making rent and saving all year for one getaway. The ability to travel, work and enjoy life at the same time, not one after the other.",
+      "sources": "Goal Plans Round 2 + Life Journey (Notion)",
+      "phases": [
+       {
+        "id": "g-freedom-r3p1",
+        "name": "Phase 1 — Know your number (Dec 2026–Jan 2027)",
+        "steps": [
+         {
+          "id": "g-freedom-r3-1-1",
+          "title": "Log every spend for a month in Bank of Maxi"
+         },
+         {
+          "id": "g-freedom-r3-1-2",
+          "title": "Essential monthly costs",
+          "mins": 30
+         },
+         {
+          "id": "g-freedom-r3-1-3",
+          "title": "Freedom number = costs + travel/fun + tax set-aside",
+          "mins": 30,
+          "why": "A benchmark: Spain's nomad visa income level, about £2,477/month."
+         }
+        ]
+       },
+       {
+        "id": "g-freedom-r3p2",
+        "name": "Phase 2 — Own income starts (2027)",
+        "steps": [
+         {
+          "id": "g-freedom-r3-2-1",
+          "title": "🏁 £500/month (linked)"
+         },
+         {
+          "id": "g-freedom-r3-2-2",
+          "title": "Sole trader once over £1,000 in a tax year",
+          "mins": 30,
+          "why": "Tell HMRC by 5 October after that tax year.",
+          "source": "gov.uk — register as a sole trader"
+         },
+         {
+          "id": "g-freedom-r3-2-3",
+          "title": "Separate business account",
+          "mins": 20
+         },
+         {
+          "id": "g-freedom-r3-2-4",
+          "title": "Tax share set aside from every payment",
+          "mins": 10
+         }
+        ]
+       },
+       {
+        "id": "g-freedom-r3p3",
+        "name": "Phase 3 — Safety net (2028, after the flat move)",
+        "steps": [
+         {
+          "id": "g-freedom-r3-3-1",
+          "title": "Emergency fund: 3 months first",
+          "why": "MoneyHelper suggests 3–6 months of essential outgoings."
+         },
+         {
+          "id": "g-freedom-r3-3-2",
+          "title": "First Self Assessment",
+          "mins": 120
+         },
+         {
+          "id": "g-freedom-r3-3-3",
+          "title": "Pension check, and plan your own if leaving the hotel",
+          "mins": 45
+         }
+        ]
+       },
+       {
+        "id": "g-freedom-r3p4",
+        "name": "Phase 4 — Grow + invest (2028–29)",
+        "steps": [
+         {
+          "id": "g-freedom-r3-4-1",
+          "title": "🏁 Own income = 50% of costs"
+         },
+         {
+          "id": "g-freedom-r3-4-2",
+          "title": "🏁 Own income = 100% of costs for 3 months"
+         },
+         {
+          "id": "g-freedom-r3-4-3",
+          "title": "Monthly Stocks & Shares ISA once the emergency fund is full",
+          "mins": 30
+         },
+         {
+          "id": "g-freedom-r3-4-4",
+          "title": "🏁 £1,000/month"
+         },
+         {
+          "id": "g-freedom-r3-4-5",
+          "title": "🏁 £2,000/month"
+         }
+        ]
+       },
+       {
+        "id": "g-freedom-r3p5",
+        "name": "Phase 5 — Location-free (2029–30)",
+        "steps": [
+         {
+          "id": "g-freedom-r3-5-1",
+          "title": "One month abroad on own income"
+         },
+         {
+          "id": "g-freedom-r3-5-2",
+          "title": "🏁 Leave the hotel"
+         },
+         {
+          "id": "g-freedom-r3-5-3",
+          "title": "🏁 Financial freedom"
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-spanish",
+      "title": "Spanish: real chats by Ibiza, B1 by end of 2027",
+      "horizon": "mid",
+      "pillars": [
+       "spanish",
+       "travel"
+      ],
+      "deadline": "2027-11-30",
+      "feeds": [
+       "g-coach"
+      ],
+      "why": "Your endpoint: understanding, reading, writing and confidence. Never freezing or switching to English mid-sentence.",
+      "sources": "Goal Plans Round 2 + Life Journey (Notion) · Cambridge English · LAE Madrid",
+      "phases": [
+       {
+        "id": "g-spanish-r3p1",
+        "name": "Phase 1 — Restart (Dec, light)",
+        "steps": [
+         {
+          "id": "g-spanish-r3-1-1",
+          "title": "Level check with Claude, picking up from Hugo's Week 3 of 13, ~236 words",
+          "mins": 20,
+          "why": "Gaps from last time: continuous tense slipping back to ser, cansado, lápiz gender."
+         },
+         {
+          "id": "g-spanish-r3-1-2",
+          "title": "20-min slot in the day templates",
+          "mins": 10
+         },
+         {
+          "id": "g-spanish-r3-1-3",
+          "title": "2 Spain podcasts for walks",
+          "mins": 15
+         },
+         {
+          "id": "g-spanish-r3-1-4",
+          "title": "10-song playlist, translate one a week",
+          "mins": 30
+         },
+         {
+          "id": "g-spanish-r3-1-5",
+          "title": "Start an hours log",
+          "mins": 5
+         }
+        ]
+       },
+       {
+        "id": "g-spanish-r3p2",
+        "name": "Phase 2 — Foundations (Jan–Mar)",
+        "steps": [
+         {
+          "id": "g-spanish-r3-2-1",
+          "title": "Finish Hugo's Weeks 3–13 as the grammar spine"
+         },
+         {
+          "id": "g-spanish-r3-2-2",
+          "title": "Core verbs present tense: ser, estar, tener, ir, hacer, querer"
+         },
+         {
+          "id": "g-spanish-r3-2-3",
+          "title": "500 most common words in flashcards"
+         },
+         {
+          "id": "g-spanish-r3-2-4",
+          "title": "Message Brian in Spanish weekly"
+         },
+         {
+          "id": "g-spanish-r3-2-5",
+          "title": "Hotel + bar phrases"
+         },
+         {
+          "id": "g-spanish-r3-2-6",
+          "title": "One Spanish line with Spanish guests every shift (from Feb)"
+         },
+         {
+          "id": "g-spanish-r3-2-7",
+          "title": "2-min 'about me' script",
+          "mins": 60
+         },
+         {
+          "id": "g-spanish-r3-2-8",
+          "title": "Record + listen back",
+          "mins": 15
+         },
+         {
+          "id": "g-spanish-r3-2-9",
+          "title": "First graded reader, Spain Spanish",
+          "mins": 180
+         },
+         {
+          "id": "g-spanish-r3-2-10",
+          "title": "🏁 50 hours logged",
+          "why": "Cambridge puts A2 at about 180–200 guided hours, so listening on walks and at the gym counts.",
+          "source": "Cambridge English — guided learning hours"
+         }
+        ]
+       },
+       {
+        "id": "g-spanish-r3p3",
+        "name": "Phase 3 — Ready to chat (Apr–Jun)",
+        "steps": [
+         {
+          "id": "g-spanish-r3-3-1",
+          "title": "Past tense"
+         },
+         {
+          "id": "g-spanish-r3-3-2",
+          "title": "Ibiza situations, one a week: bar, directions, gym, small talk"
+         },
+         {
+          "id": "g-spanish-r3-3-3",
+          "title": "Spain show weekly with Spanish subtitles",
+          "mins": 45
+         },
+         {
+          "id": "g-spanish-r3-3-4",
+          "title": "Weekly 10-min Claude role-play in May"
+         },
+         {
+          "id": "g-spanish-r3-3-5",
+          "title": "🏁 150 hours logged"
+         },
+         {
+          "id": "g-spanish-r3-3-6",
+          "title": "Ibiza: one real conversation in Spanish a day"
+         },
+         {
+          "id": "g-spanish-r3-3-7",
+          "title": "Ibiza review",
+          "mins": 20
+         }
+        ]
+       },
+       {
+        "id": "g-spanish-r3p4",
+        "name": "Phase 4 — B1 build (Jul–Nov)",
+        "steps": [
+         {
+          "id": "g-spanish-r3-4-1",
+          "title": "Future + past tenses, opinions"
+         },
+         {
+          "id": "g-spanish-r3-4-2",
+          "title": "2 B1 readers"
+         },
+         {
+          "id": "g-spanish-r3-4-3",
+          "title": "Podcasts at normal speed"
+         },
+         {
+          "id": "g-spanish-r3-4-4",
+          "title": "Decide on DELE B1 in August",
+          "mins": 15,
+          "why": "2027 dates: 15 Oct (register by 1 Sep) or 13 Nov (by 29 Sep).",
+          "source": "LAE Madrid — DELE 2027 dates"
+         },
+         {
+          "id": "g-spanish-r3-4-5",
+          "title": "🏁 B1 check"
+         },
+         {
+          "id": "g-spanish-r3-4-6",
+          "title": "2028 plan",
+          "mins": 30
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-savings",
+      "title": "Savings pots: road bike, Ibiza, new flat, then Europe",
+      "horizon": "mid",
+      "pillars": [
+       "money",
+       "travel"
+      ],
+      "deadline": "2027-12-31",
+      "feeds": [
+       "g-europe",
+       "g-freedom"
+      ],
+      "why": "Each pot has a job and a date, so extra money always has somewhere to go.",
+      "sources": "Goal Plans Round 2 (Notion) · ONS Manchester rents",
+      "phases": [
+       {
+        "id": "g-savings-r3p1",
+        "name": "Set up (Dec)",
+        "steps": [
+         {
+          "id": "g-savings-r3-1-1",
+          "title": "Separate pots in the bank",
+          "mins": 20
+         },
+         {
+          "id": "g-savings-r3-1-2",
+          "title": "Payday standing order, base £100/week",
+          "mins": 10
+         },
+         {
+          "id": "g-savings-r3-1-3",
+          "title": "Set the real Ibiza spending figure",
+          "mins": 10
+         },
+         {
+          "id": "g-savings-r3-1-4",
+          "title": "Pots in Bank of Maxi",
+          "mins": 15
+         }
+        ]
+       },
+       {
+        "id": "g-savings-r3p2",
+        "name": "Fill them (2027)",
+        "steps": [
+         {
+          "id": "g-savings-r3-2-1",
+          "title": "🏁 Road bike £650 by end of Feb"
+         },
+         {
+          "id": "g-savings-r3-2-2",
+          "title": "🏁 Ibiza spending pot full by early Mar"
+         },
+         {
+          "id": "g-savings-r3-2-3",
+          "title": "🏁 New flat £1,000",
+          "why": "Upfront rent is capped at one month and deposits at 5 weeks' rent, so £3,000 covers a ~£1,010/month Manchester 1-bed.",
+          "source": "Hamptons — Renters' Rights Act upfront rent cap"
+         },
+         {
+          "id": "g-savings-r3-2-4",
+          "title": "🏁 New flat £2,000"
+         },
+         {
+          "id": "g-savings-r3-2-5",
+          "title": "🏁 New flat £3,000"
+         },
+         {
+          "id": "g-savings-r3-2-6",
+          "title": "Spain nature trip ~£600, only if going (Aug)"
+         },
+         {
+          "id": "g-savings-r3-2-7",
+          "title": "Friday money check covers the pots",
+          "mins": 10
+         }
+        ]
+       },
+       {
+        "id": "g-savings-r3p3",
+        "name": "Europe pot (from Apr 2027)",
+        "steps": [
+         {
+          "id": "g-savings-r3-3-1",
+          "title": "Half of every PT payment goes to the Europe pot",
+          "mins": 10
+         },
+         {
+          "id": "g-savings-r3-3-2",
+          "title": "Europe pot target £4,000–6,400 by 2028"
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-firsttrip",
+      "title": "Travel 2027: Ibiza in June + maybe a Spain nature trip",
+      "horizon": "short",
+      "pillars": [
+       "travel",
+       "life"
+      ],
+      "deadline": "2027-08-31",
+      "feeds": [
+       "g-europe",
+       "g-nature"
+      ],
+      "why": "2027 trips: training, holiday and content in one.",
+      "sources": "Goal Plans Round 2 (Notion)",
+      "phases": [
+       {
+        "id": "g-firsttrip-r3p1",
+        "name": "Ibiza, 14 days in June",
+        "steps": [
+         {
+          "id": "g-firsttrip-r3-1-1b",
+          "title": "Flights, stay + time off booked",
+          "status": "done",
+          "doneOn": "2026-11-27"
+         },
+         {
+          "id": "g-firsttrip-r3-1-2",
+          "title": "Spending pot (linked: Savings)"
+         },
+         {
+          "id": "g-firsttrip-r3-1-3",
+          "title": "Open-water training block (linked: tri)"
+         },
+         {
+          "id": "g-firsttrip-r3-1-4",
+          "title": "Shot list (linked: brand)"
+         },
+         {
+          "id": "g-firsttrip-r3-1-5",
+          "title": "Full Ibiza planning session with Claude in April",
+          "mins": 45
+         },
+         {
+          "id": "g-firsttrip-r3-1-6",
+          "title": "Pack list",
+          "mins": 20
+         }
+        ]
+       },
+       {
+        "id": "g-firsttrip-r3p2",
+        "name": "Spain nature trip (decide by Aug)",
+        "steps": [
+         {
+          "id": "g-firsttrip-r3-2-1",
+          "title": "Shortlist 3 areas, e.g. Picos de Europa, Sierra Nevada, Pyrenees",
+          "mins": 30
+         },
+         {
+          "id": "g-firsttrip-r3-2-2",
+          "title": "Dates around the race + rota",
+          "mins": 15
+         },
+         {
+          "id": "g-firsttrip-r3-2-3",
+          "title": "Price it",
+          "mins": 45
+         },
+         {
+          "id": "g-firsttrip-r3-2-4",
+          "title": "Go / no-go by 31 Aug",
+          "mins": 10
+         },
+         {
+          "id": "g-firsttrip-r3-2-5",
+          "title": "Book",
+          "mins": 60
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-europe",
+      "title": "The Big Europe Adventure: 2028",
+      "horizon": "mid",
+      "pillars": [
+       "travel",
+       "life"
+      ],
+      "deadline": "2028-09-30",
+      "feeds": [
+       "g-nature",
+       "g-freedom"
+      ],
+      "why": "Travel isn't the reward for the work, it's the point of it. Est. £3,950–6,400.",
+      "sources": "Life Journey + Goal Plans Round 2 (Notion)",
+      "phases": [
+       {
+        "id": "g-europe-r3p1",
+        "name": "Groundwork (Sep–Dec 2027)",
+        "steps": [
+         {
+          "id": "g-europe-r3-1-1",
+          "title": "Planning session with Claude: length, season, work",
+          "mins": 90
+         },
+         {
+          "id": "g-europe-r3-1-2",
+          "title": "Decide length + season, e.g. summer midnight sun vs quieter late Aug/Sep",
+          "mins": 15
+         },
+         {
+          "id": "g-europe-r3-1-3",
+          "title": "Set the Europe pot target",
+          "mins": 20
+         },
+         {
+          "id": "g-europe-r3-1-4",
+          "title": "Talk to work about leave",
+          "mins": 15
+         }
+        ]
+       },
+       {
+        "id": "g-europe-r3p2",
+        "name": "The route (~60 days)",
+        "steps": [
+         {
+          "id": "g-europe-r3-2-1",
+          "title": "Scandinavia ~3 weeks: Bergen → Flåm → Nærøyfjord → Trolltunga (22km return) → Ålesund → Lofoten (5–7 days)"
+         },
+         {
+          "id": "g-europe-r3-2-2",
+          "title": "Alps ~2.5 weeks: Lauterbrunnen → Jungfrau → Interlaken → Innsbruck → Ötztal → Dolomites (Tre Cime) → Lake Como"
+         },
+         {
+          "id": "g-europe-r3-2-3",
+          "title": "Balkans ~2.5 weeks: Ljubljana → Bled → Triglav → Plitvice → Split → Dubrovnik → Kotor → Durmitor"
+         },
+         {
+          "id": "g-europe-r3-2-4",
+          "title": "Check routing against Schengen 90/180 once dates are set",
+          "mins": 15,
+          "why": "~60 days sits inside the limit, but the exact countries change the count."
+         }
+        ]
+       },
+       {
+        "id": "g-europe-r3p3",
+        "name": "Ready to go",
+        "steps": [
+         {
+          "id": "g-europe-r3-3-1",
+          "title": "Comfortable 20km+ hiking days with a loaded pack",
+          "why": "Trolltunga, Reinebringen, Tre Cime and Durmitor all need it."
+         },
+         {
+          "id": "g-europe-r3-3-2",
+          "title": "Kit: boots, 40–50L pack, layers, waterproofs",
+          "mins": 60
+         },
+         {
+          "id": "g-europe-r3-3-3",
+          "title": "InterRail pass pricing for the Alps leg",
+          "mins": 30
+         },
+         {
+          "id": "g-europe-r3-3-4",
+          "title": "Book flights: Manchester → Bergen, home from Dubrovnik or Podgorica",
+          "mins": 60
+         },
+         {
+          "id": "g-europe-r3-3-5",
+          "title": "Coach every client from the road (linked: Coach while travelling)"
+         },
+         {
+          "id": "g-europe-r3-3-6",
+          "title": "Journal one entry per major stop, private"
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-nature",
+      "title": "Live surrounded by nature",
+      "horizon": "long",
+      "pillars": [
+       "travel",
+       "life"
+      ],
+      "deadline": "2030-12-31",
+      "feeds": [],
+      "why": "The reset in wild places is real information about what you need, not sentimentality.",
+      "sources": "Goal Plans Round 2 + Life Journey (Notion)",
+      "phases": [
+       {
+        "id": "g-nature-r3p1",
+        "name": "2027 — Taste it",
+        "steps": [
+         {
+          "id": "g-nature-r3-1-1",
+          "title": "Spain nature trip (linked)"
+         },
+         {
+          "id": "g-nature-r3-1-2",
+          "title": "What 'nature' means for you: mountains, sea, which countries",
+          "mins": 20
+         }
+        ]
+       },
+       {
+        "id": "g-nature-r3p2",
+        "name": "2028 — Test it",
+        "steps": [
+         {
+          "id": "g-nature-r3-2-1",
+          "title": "Rate each Europe-trip place out of 10 for 'could I live here' (linked)"
+         }
+        ]
+       },
+       {
+        "id": "g-nature-r3p3",
+        "name": "2029 — Try it",
+        "steps": [
+         {
+          "id": "g-nature-r3-3-1",
+          "title": "Shortlist 3 places",
+          "mins": 60
+         },
+         {
+          "id": "g-nature-r3-3-2",
+          "title": "A month in the top pick while coaching online (linked)"
+         }
+        ]
+       },
+       {
+        "id": "g-nature-r3p4",
+        "name": "2030+",
+        "steps": [
+         {
+          "id": "g-nature-r3-4-1",
+          "title": "🏁 Move"
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-sub45",
+      "title": "Running PBs: sub-45 10K (spring) + sub-1:50 half (autumn)",
+      "horizon": "short",
+      "pillars": [
+       "physical"
+      ],
+      "deadline": "2027-11-07",
+      "feeds": [
+       "g-compete"
+      ],
+      "why": "Running is the clearest proof of progression: a number anyone understands.",
+      "sources": "Goal Plans Round 2 + Life Journey (Notion)",
+      "phases": [
+       {
+        "id": "g-sub45-r3p1",
+        "name": "10K, PB 45:03 (AJ Bell, 31 May 2026)",
+        "steps": [
+         {
+          "id": "g-sub45-r3-1-1",
+          "title": "Enter Great Manchester Run 10K, Sun 23 May 2027, and request the day off",
+          "mins": 10
+         },
+         {
+          "id": "g-sub45-r3-1-2",
+          "title": "One quality run a week from Feb, intervals and tempo alternating",
+          "mins": 45
+         },
+         {
+          "id": "g-sub45-r3-1-3",
+          "title": "5K time trial in March",
+          "mins": 30
+         },
+         {
+          "id": "g-sub45-r3-1-4",
+          "title": "Taper race week"
+         },
+         {
+          "id": "g-sub45-r3-1-5",
+          "title": "🏁 Sub-45"
+         }
+        ]
+       },
+       {
+        "id": "g-sub45-r3p2",
+        "name": "Half, PB 1:55:09 (Cheshire, 13 Sep 2026)",
+        "steps": [
+         {
+          "id": "g-sub45-r3-2-1",
+          "title": "Pick a race 6–8 weeks after the tri: Manchester Half (Oct), Run Heaton Park 17 Oct or Run Tatton 7 Nov",
+          "mins": 20
+         },
+         {
+          "id": "g-sub45-r3-2-2",
+          "title": "Long run back to 18–20km after the tri",
+          "why": "At Skegness (2:18) your legs faded from 15–16km, so keep the 2 heavy leg sessions in."
+         },
+         {
+          "id": "g-sub45-r3-2-3",
+          "title": "🏁 Sub-1:50"
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-ironman",
+      "title": "Half Ironman / 70.3 in 2028",
+      "horizon": "mid",
+      "pillars": [
+       "physical"
+      ],
+      "deadline": "2028-09-30",
+      "feeds": [
+       "g-compete"
+      ],
+      "why": "Moved from 2027 to 2028: Olympic tri first, then a full build.",
+      "sources": "Full competing athlete plan, Goal Plans Round 2 (Notion)",
+      "phases": [
+       {
+        "id": "g-ironman-r3p1",
+        "name": "Decide (autumn 2027)",
+        "steps": [
+         {
+          "id": "g-ironman-r3-1-1",
+          "title": "Olympic tri review + 70.3 decision (30m) (linked: Olympic tri)"
+         },
+         {
+          "id": "g-ironman-r3-1-2",
+          "title": "Pick the race, one A-race for 2028",
+          "mins": 20
+         }
+        ]
+       },
+       {
+        "id": "g-ironman-r3p2",
+        "name": "Build (20 weeks)",
+        "steps": [
+         {
+          "id": "g-ironman-r3-2-1",
+          "title": "Join a tri club for open-water sessions",
+          "mins": 20
+         },
+         {
+          "id": "g-ironman-r3-2-2",
+          "title": "🏁 2,000m continuous swim"
+         },
+         {
+          "id": "g-ironman-r3-2-3",
+          "title": "🏁 100km ride"
+         },
+         {
+          "id": "g-ironman-r3-2-4",
+          "title": "Race-fuel rehearsal in 2 long bricks"
+         },
+         {
+          "id": "g-ironman-r3-2-5",
+          "title": "Bike fit if not done yet",
+          "mins": 60
+         }
+        ]
+       },
+       {
+        "id": "g-ironman-r3p3",
+        "name": "Race",
+        "steps": [
+         {
+          "id": "g-ironman-r3-3-1",
+          "title": "Taper week"
+         },
+         {
+          "id": "g-ironman-r3-3-2",
+          "title": "🏁 First 70.3 (1.9km / 90km / 21.1km)"
+         },
+         {
+          "id": "g-ironman-r3-3-3",
+          "title": "Review",
+          "mins": 30
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-fight",
+      "title": "Combat: back at SBG → BJJ comp → first amateur MMA bout",
+      "horizon": "mid",
+      "pillars": [
+       "physical"
+      ],
+      "deadline": "2028-12-31",
+      "feeds": [
+       "g-compete"
+      ],
+      "why": "Kickboxing for 7 years, returning, plus wrestling from zero: the same discipline on an old skill and a new one.",
+      "sources": "Full competing athlete plan (Notion)",
+      "phases": [
+       {
+        "id": "g-fight-r3p1",
+        "name": "2027 — Back in",
+        "steps": [
+         {
+          "id": "g-fight-r3-1-1",
+          "title": "Back at SBG in March/April, adding BJJ classes"
+         },
+         {
+          "id": "g-fight-r3-1-2",
+          "title": "Hand/grip fully fit before sparring; physio if not",
+          "mins": 30
+         },
+         {
+          "id": "g-fight-r3-1-3",
+          "title": "Tell the coach you want to compete",
+          "mins": 10
+         },
+         {
+          "id": "g-fight-r3-1-4",
+          "title": "🏁 First local white-belt BJJ comp, gi or no-gi",
+          "why": "White-belt divisions are the low-risk way into competing before an MMA fight.",
+          "source": "UKBJJA — registration categories"
+         }
+        ]
+       },
+       {
+        "id": "g-fight-r3p2",
+        "name": "2028 — First fight",
+        "steps": [
+         {
+          "id": "g-fight-r3-2-1",
+          "title": "3+ months of regular sparring"
+         },
+         {
+          "id": "g-fight-r3-2-2",
+          "title": "Book the fight medical early: exam + bloodwork",
+          "mins": 60,
+          "why": "Needed for an amateur bout at a UKMMAF-aligned event."
+         },
+         {
+          "id": "g-fight-r3-2-3",
+          "title": "8–10 week fight camp after the tri season"
+         },
+         {
+          "id": "g-fight-r3-2-4",
+          "title": "🏁 First amateur bout"
+         },
+         {
+          "id": "g-fight-r3-2-5",
+          "title": "2 BJJ comps a year"
+         }
+        ]
+       },
+       {
+        "id": "g-fight-r3p3",
+        "name": "2029",
+        "steps": [
+         {
+          "id": "g-fight-r3-3-1",
+          "title": "2nd and 3rd fights, spaced after each season"
+         },
+         {
+          "id": "g-fight-r3-3-2",
+          "title": "Decide: stop at 'a few' fights?",
+          "mins": 30
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     },
+     {
+      "id": "g-compete",
+      "title": "Full competing athlete: racing all year (~2030)",
+      "horizon": "long",
+      "pillars": [
+       "physical"
+      ],
+      "deadline": "2030-12-31",
+      "feeds": [],
+      "why": "Racing all year across tri, running and combat sports, and finishing strong.",
+      "sources": "Full competing athlete plan (Notion)",
+      "phases": [
+       {
+        "id": "g-compete-r3p1",
+        "name": "2027 — First season",
+        "steps": [
+         {
+          "id": "g-compete-r3-1-1",
+          "title": "Sub-45 10K, Olympic tri, half PB (linked)"
+         },
+         {
+          "id": "g-compete-r3-1-2",
+          "title": "First BJJ competition (linked)"
+         }
+        ]
+       },
+       {
+        "id": "g-compete-r3p2",
+        "name": "2028 — Step up",
+        "steps": [
+         {
+          "id": "g-compete-r3-2-1",
+          "title": "Trail half in the Peak District, 2 recce runs first (2h each)"
+         },
+         {
+          "id": "g-compete-r3-2-2",
+          "title": "First 70.3 (linked)"
+         },
+         {
+          "id": "g-compete-r3-2-3",
+          "title": "First amateur MMA bout (linked)"
+         }
+        ]
+       },
+       {
+        "id": "g-compete-r3p3",
+        "name": "2029 — Endurance depth",
+        "steps": [
+         {
+          "id": "g-compete-r3-3-1",
+          "title": "Spring road marathon, 16-week build"
+         },
+         {
+          "id": "g-compete-r3-3-2",
+          "title": "🏁 First marathon"
+         },
+         {
+          "id": "g-compete-r3-3-3",
+          "title": "50K trail ultra, 3 long trail runs of 30km+ first",
+          "why": "Peak District options carry ~1,500m of climbing."
+         },
+         {
+          "id": "g-compete-r3-3-4",
+          "title": "🏁 First ultra"
+         }
+        ]
+       },
+       {
+        "id": "g-compete-r3p4",
+        "name": "2030 — The big one",
+        "steps": [
+         {
+          "id": "g-compete-r3-4-1",
+          "title": "Pick and enter a full Ironman a year ahead",
+          "mins": 20,
+          "why": "First-timer plans build to 12–14 hrs/week, which fits once coaching is full-time.",
+          "source": "TrainingPeaks — full-distance training plan"
+         },
+         {
+          "id": "g-compete-r3-4-2",
+          "title": "🏁 3,000m swim"
+         },
+         {
+          "id": "g-compete-r3-4-3",
+          "title": "🏁 5-hour ride"
+         },
+         {
+          "id": "g-compete-r3-4-4",
+          "title": "🏁 30km run"
+         },
+         {
+          "id": "g-compete-r3-4-5",
+          "title": "🏁 Ironman finisher"
+         }
+        ]
+       },
+       {
+        "id": "g-compete-r3p5",
+        "name": "Every year",
+        "steps": [
+         {
+          "id": "g-compete-r3-5-1",
+          "title": "December review + next year's race calendar, one A-race per season",
+          "mins": 60
+         },
+         {
+          "id": "g-compete-r3-5-2",
+          "title": "Physio MOT each January",
+          "mins": 60
+         },
+         {
+          "id": "g-compete-r3-5-3",
+          "title": "HR zones test every spring",
+          "mins": 45
+         },
+         {
+          "id": "g-compete-r3-5-4",
+          "title": "Recovery week every 4th week"
+         }
+        ]
+       }
+      ],
+      "replaceSteps": true
+     }
+    ],
+    "goalRemovePhase": [
+     {
+      "match": "Qualified PT",
+      "phase": "r3-l2-left"
+     }
+    ],
+    "goalPhaseSteps": [
+     {
+      "match": "Qualified PT",
+      "phaseMatch": "Level 2",
+      "before": "filmed",
+      "steps": [
+       {
+        "id": "r3b-l2-1",
+        "title": "Trim the script to ~55 min + rest times on the programme card",
+        "mins": 60
+       },
+       {
+        "id": "r3b-l2-2",
+        "title": "Sign both declarations in the guidance doc",
+        "mins": 10
+       },
+       {
+        "id": "r3b-l2-3",
+        "title": "Max completes the PAR-Q",
+        "mins": 10
+       },
+       {
+        "id": "r3b-l2-4",
+        "title": "One timed practice run with Max",
+        "mins": 60
+       }
+      ]
+     },
+     {
+      "match": "Qualified PT",
+      "phaseMatch": "Level 2",
+      "before": "passed",
+      "steps": [
+       {
+        "id": "r3b-l2-5",
+        "title": "Check Task 1 (programme design) + Task 2 (exercise order) on the platform",
+        "mins": 20
+       },
+       {
+        "id": "r3b-l2-6",
+        "title": "Chase the business skills assessment score",
+        "mins": 10
+       },
+       {
+        "id": "r3b-l2-7",
+        "title": "Unit 2 gap: sections 2.4 + 2.5",
+        "mins": 60
+       },
+       {
+        "id": "r3b-l2-8",
+        "title": "Course evaluation (final Level 2 step)",
+        "mins": 15
+       }
+      ]
+     },
+     {
+      "match": "Qualified PT",
+      "phaseMatch": "Level 3",
+      "before": "certificate",
+      "steps": [
+       {
+        "id": "r3b-nasm",
+        "title": "Decide on NASM CPT for international credibility",
+        "mins": 30
+       }
+      ]
+     }
+    ],
+    "goalRenote": [
+     {
+      "match": "Close out Level 2",
+      "note": "NOT finished: merged into 'Qualified PT, ready to coach'. Level 2 (filming the session) and Level 3 are tracked there."
+     }
+    ],
+    "goalLinks": [
+     {
+      "match": "^Content",
+      "feeds": [
+       "g-brand"
+      ]
+     },
+     {
+      "match": "Olympic tri",
+      "feeds": [
+       "g-ironman",
+       "g-compete"
+      ]
+     },
+     {
+      "match": "500.*month",
+      "feeds": [
+       "g-freedom",
+       "g-coach"
+      ],
+      "horizon": "mid"
+     },
+     {
+      "match": "Qualified PT",
+      "feeds": [
+       "g-coach"
+      ]
+     },
+     {
+      "match": "F&B manager",
+      "feeds": [
+       "g-freedom"
+      ]
+     }
+    ]
+   }
   }
  ]
 }

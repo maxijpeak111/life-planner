@@ -4,7 +4,7 @@
 const KEY = 'lifeplanner.data';
 const SNAP_KEY = 'lifeplanner.data.daily';
 const SCHEMA = 1;
-const VERSION = '2.7';
+const VERSION = '2.8';
 
 const TAGS = ['T', 'S', 'B', 'P'];
 const TAGN = { T: 'Training', S: 'Study', B: 'Business', P: 'Personal' };
@@ -581,9 +581,14 @@ function pillarPath(pid) {
   return h + '</div>';
 }
 function linkSheet(g, dir) {
-  const cand = activeGoals().filter(x => x.id !== g.id && (dir === 'up' ? HZO[x.horizon] >= HZO[g.horizon] : HZO[x.horizon] <= HZO[g.horizon])).sort((a, b) => HZO[b.horizon] - HZO[a.horizon]);
   const on = x => dir === 'up' ? g.feeds.includes(x.id) : x.feeds.includes(g.id);
-  openSheet(`<h3>${dir === 'up' ? 'What does this build toward?' : 'Which goals feed this one?'}</h3><p class="small muted">${esc(g.title)}</p>${cand.length ? `<div class="list">${cand.map(x => `<button class="mrow hrow ${on(x) ? 'on' : ''}" data-act="linkToggle" data-g="${g.id}" data-x="${x.id}" data-v="${dir}"><span class="hk">${on(x) ? '✓' : ''}</span><div class="tt"><div class="title">${esc(x.title)}</div><div class="meta">${HZN[x.horizon]} term</div></div></button>`).join('')}</div>` : '<div class="card empty">No goals at that level yet.</div>'}<div class="row-btns"><button class="btn primary" data-act="closeSheetRender">Done</button></div>`);
+  const shares = x => x.pillars.some(p => g.pillars.includes(p));
+  const rank = x => (on(x) ? 0 : shares(x) ? 1 : 2);
+  const cand = activeGoals().filter(x => x.id !== g.id && (dir === 'up' ? HZO[x.horizon] >= HZO[g.horizon] : HZO[x.horizon] <= HZO[g.horizon])).sort((a, b) => rank(a) - rank(b) || HZO[b.horizon] - HZO[a.horizon] || a.title.localeCompare(b.title));
+  const head = { 0: 'Linked now', 1: 'Same pillar — most likely', 2: 'Other goals' };
+  const row = x => `<button class="mrow hrow ${on(x) ? 'on' : ''}" data-act="linkToggle" data-g="${g.id}" data-x="${x.id}" data-v="${dir}"><span class="hk">${on(x) ? '✓' : ''}</span><div class="tt"><div class="title">${esc(x.title)}</div><div class="meta">${HZN[x.horizon]} term</div></div></button>`;
+  const groups = [0, 1, 2].map(r => [r, cand.filter(x => rank(x) === r)]).filter(([, l]) => l.length);
+  openSheet(`<h3>${dir === 'up' ? 'What does this build toward?' : 'Which goals feed this one?'}</h3><p class="small muted">${esc(g.title)}</p><p class="small muted">Every active goal ${dir === 'up' ? 'at this level or bigger' : 'at this level or smaller'} is listed. Only tick the ones it really builds.</p>${cand.length ? groups.map(([r, l]) => `<div class="sect">${head[r]}</div><div class="list">${l.map(row).join('')}</div>`).join('') : '<div class="card empty">No goals at that level yet.</div>'}<div class="row-btns"><button class="btn primary" data-act="closeSheetRender">Done</button></div>`);
 }
 function goalDetail(g) {
   const feeds = g.feeds.map(goalById).filter(Boolean), fedBy = S.goals.filter(x => x.feeds.includes(g.id));
@@ -1645,6 +1650,16 @@ function mergeData(d) {
   /* goalAddSteps: add a phase of steps to an existing goal (by id, or by title match) — never removes anything */
   (d.goalAddSteps || []).forEach(a => { const g = a.id ? goalById(a.id) : findGoalByMatch(a.match); if (!g || !a.phase || g.phases.some(p => p.id === a.phase.id)) return;
     const ph = JSON.parse(JSON.stringify(a.phase)); ph.steps = (ph.steps || []).map(x => ({ ...x, status: x.status || 'todo' })); g.phases.push(ph); });
+  /* goalPhaseSteps: insert steps into an existing phase (phase by name regex), before the first step matching `before` (else at the end); skips step ids already present */
+  (d.goalPhaseSteps || []).forEach(a => { const g = a.id ? goalById(a.id) : findGoalByMatch(a.match); if (!g) return; let rx; try { rx = new RegExp(a.phaseMatch, 'i'); } catch (e) { return; }
+    const ph = g.phases.find(p => rx.test(p.name)); if (!ph) return; const have = new Set(allSteps(g).map(x => x.id)); const add = (a.steps || []).filter(x => !have.has(x.id)).map(x => ({ ...x, status: x.status || 'todo' })); if (!add.length) return;
+    let at = ph.steps.length; if (a.before) { try { const bx = new RegExp(a.before, 'i'); const i = ph.steps.findIndex(x => bx.test(x.title)); if (i >= 0) at = i; } catch (e) { } }
+    ph.steps.splice(at, 0, ...add); });
+  /* goalRemovePhase: remove a phase Claude added earlier, only if none of its steps were started */
+  (d.goalRemovePhase || []).forEach(a => { const g = a.id ? goalById(a.id) : findGoalByMatch(a.match); if (!g) return; const ph = g.phases.find(p => p.id === a.phase); if (!ph || ph.steps.some(x => x.status !== 'todo' || x.note)) return;
+    if (S.tasks.some(t => t.goalId === g.id && ph.steps.some(x => x.id === t.stepId))) return; g.phases = g.phases.filter(p => p !== ph); });
+  /* goalRenote: change the note on an archived goal */
+  (d.goalRenote || []).forEach(a => { let rx; try { rx = new RegExp(a.match, 'i'); } catch (e) { return; } S.goals.filter(g => g.archived && (a.id ? g.id === a.id : rx.test(g.title))).forEach(g => { g.archiveNote = a.note; }); });
   /* goalArchive: archive an old goal with a note (restorable). onlyIf = only when its replacement goal exists */
   (d.goalArchive || []).forEach(a => { const g = a.id ? goalById(a.id) : findGoalByMatch(a.match); if (!g || g.archived || g.achieved) return;
     if (a.onlyIf && !findGoalByMatch(a.onlyIf, g.id)) return; g.archived = true; g.archivedOn = today(); g.archiveNote = a.note || ''; });
@@ -1652,7 +1667,7 @@ function mergeData(d) {
   (d.goalPillars || []).forEach(p => { if (!Array.isArray(p.pillars)) return; S.goalPillarFix = S.goalPillarFix || {}; S.goalPillarFix[p.id] = p.pillars; });
   S.goals.forEach(g => { const fx = S.goalPillarFix && S.goalPillarFix[g.id]; if (fx) g.pillars = fx.filter(x => pillarById(x)); });
   /* goalLinks: patch links/timeframe on existing goals without touching their steps */
-  (d.goalLinks || []).forEach(p => { const g = goalById(p.id); if (!g) return; if (p.feeds) p.feeds.forEach(f => { if (f !== g.id && !g.feeds.includes(f)) g.feeds.push(f); }); if (p.horizon) g.horizon = p.horizon; if (p.start && !g.start) g.start = p.start; if (p.deadline && !g.deadline) g.deadline = p.deadline; });
+  (d.goalLinks || []).forEach(p => { const g = p.id ? goalById(p.id) : findGoalByMatch(p.match); if (!g) return; if (p.feeds) p.feeds.forEach(f => { if (f !== g.id && !g.feeds.includes(f)) g.feeds.push(f); }); if (p.horizon) g.horizon = p.horizon; if (p.start && !g.start) g.start = p.start; if (p.deadline && !g.deadline) g.deadline = p.deadline; });
   ['tasks', 'habits', 'inbox', 'wins', 'people', 'reading', 'admin', 'timeline', 'travel', 'templates', 'recurring'].forEach(k => {
     (d[k] || []).forEach(it => { it = { ...it }; it.id = it.id || uid(); const ix = S[k].findIndex(x => x.id === it.id); if (ix >= 0) { if (it.replace) { delete it.replace; S[k][ix] = it; } return; } delete it.replace;
       if (k === 'tasks') it = normTask(it); if (k === 'recurring') { it.start = it.start || today(); it.days = (it.days || [0, 1, 2, 3, 4, 5, 6]).map(Number); } S[k].push(it); });

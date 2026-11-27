@@ -1,6 +1,6 @@
 /* Network-first: updates arrive immediately when online, cached copy when offline.
    This file never touches the planner's saved data (that lives in localStorage). */
-const CACHE = 'life-planner-v18';
+const CACHE = 'life-planner-v19';
 const CORE = ['./', './index.html', './style.css?v=17', './app.js?v=17', './manifest.webmanifest', './icon-180.png'];
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).catch(() => {})); });
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
